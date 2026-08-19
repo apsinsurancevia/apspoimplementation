@@ -705,12 +705,16 @@ function validateGrid(spreadsheetId, tabName) {
       errors.forEach(function(e) {
         Logger.log('  Row ' + e.row + ', Col ' + e.col + ': ' + e.message);
       });
-      sendDuplicateRateAlert(tabName,
-        errors.length + ' validation errors found.\n\n' +
-        errors.map(function(e) {
-          return 'Row ' + e.row + ': ' + e.message;
-        }).join('\n')
-      );
+      if (CONFIG.EMAIL_COORDINATOR) {
+        var emailBody = 'Grid validation failed for tab: ' + tabName + '\n\n' +
+          errors.length + ' errors found:\n\n' +
+          errors.map(function(e) {
+            return 'Row ' + e.row + ', Col ' + e.col + ': ' + e.message;
+          }).join('\n') +
+          '\n\n— CaliberPO System';
+        MailApp.sendEmail(CONFIG.EMAIL_COORDINATOR,
+          'CaliberPO — Grid Validation Failed: ' + tabName, emailBody);
+      }
     } else {
       Logger.log('validateGrid PASSED: ' + tabName +
         ' (' + result.rowsChecked + ' rows checked)');

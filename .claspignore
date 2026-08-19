@@ -1,0 +1,2 @@
+# rootDir is ./src — clasp only reads from there already.
+# List any files inside src/ to exclude from push (none currently).

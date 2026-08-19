@@ -1,0 +1,244 @@
+rto_code,rto_name,city,state,state_code,zone,active
+AN-01,Port Blair,Port Blair,Andaman & Nicobar Islands,35,Z4,Y
+AP-01,Kurnool,Kurnool,Andhra Pradesh,37,Z3,Y
+AP-02,Nandyal,Nandyal,Andhra Pradesh,37,Z3,Y
+AP-03,Ongole,Ongole,Andhra Pradesh,37,Z3,Y
+AP-04,Nellore,Nellore,Andhra Pradesh,37,Z3,Y
+AP-05,Tirupati,Tirupati,Andhra Pradesh,37,Z3,Y
+AP-06,Chittoor,Chittoor,Andhra Pradesh,37,Z3,Y
+AP-07,Kadapa,Kadapa,Andhra Pradesh,37,Z3,Y
+AP-08,Anantapur,Anantapur,Andhra Pradesh,37,Z3,Y
+AP-09,Rajampet,Rajampet,Andhra Pradesh,37,Z3,Y
+AP-10,Guntur,Guntur,Andhra Pradesh,37,Z3,Y
+AP-11,Krishna (Machilipatnam),Machilipatnam,Andhra Pradesh,37,Z3,Y
+AP-12,West Godavari (Eluru),Eluru,Andhra Pradesh,37,Z3,Y
+AP-13,East Godavari (Kakinada),Kakinada,Andhra Pradesh,37,Z3,Y
+AP-14,Visakhapatnam,Visakhapatnam,Andhra Pradesh,37,Z2,Y
+AP-15,Vizianagaram,Vizianagaram,Andhra Pradesh,37,Z3,Y
+AP-16,Srikakulam,Srikakulam,Andhra Pradesh,37,Z3,Y
+AR-01,Itanagar,Itanagar,Arunachal Pradesh,12,Z4,Y
+AS-01,Guwahati,Guwahati,Assam,18,Z3,Y
+AS-02,Kamrup Rural,Guwahati,Assam,18,Z3,Y
+AS-03,Nagaon,Nagaon,Assam,18,Z4,Y
+AS-04,Jorhat,Jorhat,Assam,18,Z4,Y
+AS-05,Dibrugarh,Dibrugarh,Assam,18,Z4,Y
+BR-01,Patna,Patna,Bihar,10,Z2,Y
+BR-02,Nalanda,Bihar Sharif,Bihar,10,Z3,Y
+BR-03,Gaya,Gaya,Bihar,10,Z3,Y
+BR-04,Bhagalpur,Bhagalpur,Bihar,10,Z3,Y
+BR-05,Muzaffarpur,Muzaffarpur,Bihar,10,Z3,Y
+CG-01,Raipur,Raipur,Chhattisgarh,22,Z2,Y
+CG-02,Durg,Durg,Chhattisgarh,22,Z3,Y
+CG-03,Bilaspur,Bilaspur,Chhattisgarh,22,Z3,Y
+DL-01,Sarai Kale Khan,Delhi,Delhi,07,Z1,Y
+DL-02,Mayapuri,Delhi,Delhi,07,Z1,Y
+DL-03,Rohini,Delhi,Delhi,07,Z1,Y
+DL-04,Janakpuri,Delhi,Delhi,07,Z1,Y
+DL-05,Loni Road,Delhi,Delhi,07,Z1,Y
+DL-06,Burari,Delhi,Delhi,07,Z1,Y
+DL-07,Hari Nagar,Delhi,Delhi,07,Z1,Y
+DL-08,Sarita Vihar,Delhi,Delhi,07,Z1,Y
+DL-09,Wazirpur,Delhi,Delhi,07,Z1,Y
+DL-10,Dwarka,Delhi,Delhi,07,Z1,Y
+DL-11,Noida Link Road,Delhi,Delhi,07,Z1,Y
+DL-12,Pitampura,Delhi,Delhi,07,Z1,Y
+DL-13,Vasant Vihar,Delhi,Delhi,07,Z1,Y
+DL-14,Shahdara,Delhi,Delhi,07,Z1,Y
+GA-01,Panaji (North Goa),Panaji,Goa,30,Z2,Y
+GA-02,Margao (South Goa),Margao,Goa,30,Z2,Y
+GJ-01,Ahmedabad,Ahmedabad,Gujarat,24,Z1,Y
+GJ-02,Gandhinagar,Gandhinagar,Gujarat,24,Z2,Y
+GJ-03,Mehsana,Mehsana,Gujarat,24,Z3,Y
+GJ-04,Banaskantha,Palanpur,Gujarat,24,Z3,Y
+GJ-05,Sabarkantha,Himatnagar,Gujarat,24,Z3,Y
+GJ-06,Bhavnagar,Bhavnagar,Gujarat,24,Z2,Y
+GJ-07,Amreli,Amreli,Gujarat,24,Z3,Y
+GJ-08,Rajkot,Rajkot,Gujarat,24,Z2,Y
+GJ-09,Jamnagar,Jamnagar,Gujarat,24,Z2,Y
+GJ-10,Junagadh,Junagadh,Gujarat,24,Z3,Y
+GJ-11,Porbandar,Porbandar,Gujarat,24,Z3,Y
+GJ-12,Surendranagar,Surendranagar,Gujarat,24,Z3,Y
+GJ-13,Vadodara,Vadodara,Gujarat,24,Z2,Y
+GJ-14,Anand,Anand,Gujarat,24,Z3,Y
+GJ-15,Kheda,Nadiad,Gujarat,24,Z3,Y
+GJ-16,Surat,Surat,Gujarat,24,Z1,Y
+GJ-17,Navsari,Navsari,Gujarat,24,Z3,Y
+GJ-18,Valsad,Valsad,Gujarat,24,Z3,Y
+HR-01,Ambala,Ambala,Haryana,06,Z2,Y
+HR-02,Kurukshetra,Kurukshetra,Haryana,06,Z3,Y
+HR-03,Karnal,Karnal,Haryana,06,Z2,Y
+HR-04,Panipat,Panipat,Haryana,06,Z2,Y
+HR-05,Sonipat,Sonipat,Haryana,06,Z2,Y
+HR-06,Rohtak,Rohtak,Haryana,06,Z2,Y
+HR-07,Jhajjar,Jhajjar,Haryana,06,Z3,Y
+HR-08,Faridabad,Faridabad,Haryana,06,Z1,Y
+HR-09,Gurgaon,Gurgaon,Haryana,06,Z1,Y
+HR-10,Rewari,Rewari,Haryana,06,Z3,Y
+HP-01,Shimla,Shimla,Himachal Pradesh,02,Z3,Y
+HP-02,Solan,Solan,Himachal Pradesh,02,Z3,Y
+HP-03,Kangra,Dharamshala,Himachal Pradesh,02,Z4,Y
+HP-04,Mandi,Mandi,Himachal Pradesh,02,Z4,Y
+JK-01,Jammu,Jammu,Jammu & Kashmir,01,Z3,Y
+JK-02,Srinagar,Srinagar,Jammu & Kashmir,01,Z3,Y
+JH-01,Ranchi,Ranchi,Jharkhand,20,Z2,Y
+JH-02,Dhanbad,Dhanbad,Jharkhand,20,Z2,Y
+JH-03,Jamshedpur,Jamshedpur,Jharkhand,20,Z2,Y
+JH-04,Bokaro,Bokaro,Jharkhand,20,Z3,Y
+KA-01,Bangalore (Central),Bangalore,Karnataka,29,Z1,Y
+KA-02,Bangalore (East),Bangalore,Karnataka,29,Z1,Y
+KA-03,Bangalore (North),Bangalore,Karnataka,29,Z1,Y
+KA-04,Bangalore (South),Bangalore,Karnataka,29,Z1,Y
+KA-05,Bangalore (West),Bangalore,Karnataka,29,Z1,Y
+KA-06,Bangalore Rural,Bangalore,Karnataka,29,Z2,Y
+KA-07,Kolar,Kolar,Karnataka,29,Z3,Y
+KA-08,Tumkur,Tumkur,Karnataka,29,Z3,Y
+KA-09,Chikkaballapur,Chikkaballapur,Karnataka,29,Z3,Y
+KA-10,Ramanagara,Ramanagara,Karnataka,29,Z3,Y
+KA-11,Mandya,Mandya,Karnataka,29,Z3,Y
+KA-12,Hassan,Hassan,Karnataka,29,Z3,Y
+KA-13,Mysore,Mysore,Karnataka,29,Z2,Y
+KA-14,Chamarajanagar,Chamarajanagar,Karnataka,29,Z4,Y
+KA-15,Kodagu,Madikeri,Karnataka,29,Z4,Y
+KA-16,Mangalore,Mangalore,Karnataka,29,Z2,Y
+KA-17,Udupi,Udupi,Karnataka,29,Z3,Y
+KA-18,Chikmagalur,Chikmagalur,Karnataka,29,Z3,Y
+KA-19,Shivamogga,Shivamogga,Karnataka,29,Z3,Y
+KA-20,Davangere,Davangere,Karnataka,29,Z3,Y
+KA-21,Chitradurga,Chitradurga,Karnataka,29,Z3,Y
+KA-22,Bellary,Bellary,Karnataka,29,Z3,Y
+KA-23,Raichur,Raichur,Karnataka,29,Z4,Y
+KA-24,Koppal,Koppal,Karnataka,29,Z4,Y
+KA-25,Gadag,Gadag,Karnataka,29,Z4,Y
+KA-26,Dharwad,Dharwad,Karnataka,29,Z2,Y
+KA-27,Haveri,Haveri,Karnataka,29,Z3,Y
+KA-28,Belagavi,Belagavi,Karnataka,29,Z2,Y
+KA-29,Vijayapura,Vijayapura,Karnataka,29,Z3,Y
+KA-30,Bagalkot,Bagalkot,Karnataka,29,Z4,Y
+KA-31,Yadgir,Yadgir,Karnataka,29,Z4,Y
+KA-32,Kalaburagi,Kalaburagi,Karnataka,29,Z3,Y
+KA-33,Bidar,Bidar,Karnataka,29,Z4,Y
+KL-01,Thiruvananthapuram,Thiruvananthapuram,Kerala,32,Z2,Y
+KL-02,Kollam,Kollam,Kerala,32,Z3,Y
+KL-03,Pathanamthitta,Pathanamthitta,Kerala,32,Z3,Y
+KL-04,Alappuzha,Alappuzha,Kerala,32,Z3,Y
+KL-05,Kottayam,Kottayam,Kerala,32,Z3,Y
+KL-06,Idukki,Idukki,Kerala,32,Z4,Y
+KL-07,Ernakulam,Ernakulam,Kerala,32,Z1,Y
+KL-08,Thrissur,Thrissur,Kerala,32,Z2,Y
+KL-09,Palakkad,Palakkad,Kerala,32,Z3,Y
+KL-10,Malappuram,Malappuram,Kerala,32,Z3,Y
+KL-11,Kozhikode,Kozhikode,Kerala,32,Z2,Y
+KL-12,Wayanad,Kalpetta,Kerala,32,Z4,Y
+KL-13,Kannur,Kannur,Kerala,32,Z2,Y
+KL-14,Kasaragod,Kasaragod,Kerala,32,Z3,Y
+MP-01,Bhopal,Bhopal,Madhya Pradesh,23,Z2,Y
+MP-02,Sehore,Sehore,Madhya Pradesh,23,Z3,Y
+MP-03,Raisen,Raisen,Madhya Pradesh,23,Z3,Y
+MP-04,Indore,Indore,Madhya Pradesh,23,Z1,Y
+MP-05,Ujjain,Ujjain,Madhya Pradesh,23,Z2,Y
+MP-06,Gwalior,Gwalior,Madhya Pradesh,23,Z2,Y
+MP-07,Jabalpur,Jabalpur,Madhya Pradesh,23,Z2,Y
+MH-01,Mumbai (Central),Mumbai,Maharashtra,27,Z1,Y
+MH-02,Mumbai (West),Mumbai,Maharashtra,27,Z1,Y
+MH-03,Thane,Thane,Maharashtra,27,Z1,Y
+MH-04,Kalyan,Kalyan,Maharashtra,27,Z1,Y
+MH-05,Pune,Pune,Maharashtra,27,Z1,Y
+MH-06,Pimpri-Chinchwad,Pune,Maharashtra,27,Z1,Y
+MH-07,Nashik,Nashik,Maharashtra,27,Z2,Y
+MH-08,Ahmednagar,Ahmednagar,Maharashtra,27,Z3,Y
+MH-09,Aurangabad,Aurangabad,Maharashtra,27,Z2,Y
+MH-10,Latur,Latur,Maharashtra,27,Z3,Y
+MH-11,Nanded,Nanded,Maharashtra,27,Z3,Y
+MH-12,Solapur,Solapur,Maharashtra,27,Z2,Y
+MH-13,Satara,Satara,Maharashtra,27,Z3,Y
+MH-14,Sangli,Sangli,Maharashtra,27,Z3,Y
+MH-15,Kolhapur,Kolhapur,Maharashtra,27,Z2,Y
+MH-16,Nagpur,Nagpur,Maharashtra,27,Z1,Y
+MH-17,Amravati,Amravati,Maharashtra,27,Z2,Y
+MH-18,Akola,Akola,Maharashtra,27,Z3,Y
+MH-19,Washim,Washim,Maharashtra,27,Z4,Y
+MH-20,Raigad,Alibag,Maharashtra,27,Z2,Y
+MN-01,Imphal,Imphal,Manipur,14,Z4,Y
+ML-01,Shillong,Shillong,Meghalaya,17,Z4,Y
+MZ-01,Aizawl,Aizawl,Mizoram,15,Z4,Y
+NL-01,Kohima,Kohima,Nagaland,13,Z4,Y
+OD-01,Bhubaneswar,Bhubaneswar,Odisha,21,Z2,Y
+OD-02,Cuttack,Cuttack,Odisha,21,Z2,Y
+OD-03,Rourkela,Rourkela,Odisha,21,Z3,Y
+OD-04,Brahmapur,Brahmapur,Odisha,21,Z3,Y
+PB-01,Amritsar,Amritsar,Punjab,03,Z2,Y
+PB-02,Ludhiana,Ludhiana,Punjab,03,Z1,Y
+PB-03,Jalandhar,Jalandhar,Punjab,03,Z2,Y
+PB-04,Patiala,Patiala,Punjab,03,Z2,Y
+PB-05,Mohali,Mohali,Punjab,03,Z2,Y
+RJ-01,Jaipur,Jaipur,Rajasthan,08,Z1,Y
+RJ-02,Ajmer,Ajmer,Rajasthan,08,Z2,Y
+RJ-03,Jodhpur,Jodhpur,Rajasthan,08,Z2,Y
+RJ-04,Bikaner,Bikaner,Rajasthan,08,Z3,Y
+RJ-05,Udaipur,Udaipur,Rajasthan,08,Z2,Y
+RJ-06,Kota,Kota,Rajasthan,08,Z2,Y
+SK-01,Gangtok,Gangtok,Sikkim,11,Z4,Y
+TN-01,Chennai (Central),Chennai,Tamil Nadu,33,Z1,Y
+TN-02,Chennai (West),Chennai,Tamil Nadu,33,Z1,Y
+TN-03,Chennai (North),Chennai,Tamil Nadu,33,Z1,Y
+TN-04,Thiruvallur,Thiruvallur,Tamil Nadu,33,Z2,Y
+TN-05,Kancheepuram,Kancheepuram,Tamil Nadu,33,Z2,Y
+TN-06,Vellore,Vellore,Tamil Nadu,33,Z3,Y
+TN-07,Tirupattur,Tirupattur,Tamil Nadu,33,Z3,Y
+TN-08,Tiruvannamalai,Tiruvannamalai,Tamil Nadu,33,Z3,Y
+TN-09,Villupuram,Villupuram,Tamil Nadu,33,Z3,Y
+TN-10,Cuddalore,Cuddalore,Tamil Nadu,33,Z3,Y
+TN-11,Salem,Salem,Tamil Nadu,33,Z2,Y
+TN-12,Namakkal,Namakkal,Tamil Nadu,33,Z3,Y
+TN-13,Dharmapuri,Dharmapuri,Tamil Nadu,33,Z3,Y
+TN-14,Krishnagiri,Krishnagiri,Tamil Nadu,33,Z3,Y
+TN-15,Erode,Erode,Tamil Nadu,33,Z2,Y
+TN-16,Coimbatore,Coimbatore,Tamil Nadu,33,Z1,Y
+TN-17,Tiruppur,Tiruppur,Tamil Nadu,33,Z2,Y
+TN-18,Nilgiris,Ooty,Tamil Nadu,33,Z4,Y
+TN-19,Dindigul,Dindigul,Tamil Nadu,33,Z3,Y
+TN-20,Madurai,Madurai,Tamil Nadu,33,Z1,Y
+TN-21,Theni,Theni,Tamil Nadu,33,Z3,Y
+TN-22,Virudhunagar,Virudhunagar,Tamil Nadu,33,Z3,Y
+TN-23,Sivaganga,Sivaganga,Tamil Nadu,33,Z3,Y
+TN-24,Ramanathapuram,Ramanathapuram,Tamil Nadu,33,Z3,Y
+TN-25,Tirunelveli,Tirunelveli,Tamil Nadu,33,Z2,Y
+TN-26,Tenkasi,Tenkasi,Tamil Nadu,33,Z3,Y
+TN-27,Kanyakumari,Nagercoil,Tamil Nadu,33,Z2,Y
+TN-28,Tiruchirappalli,Tiruchirappalli,Tamil Nadu,33,Z2,Y
+TN-29,Karur,Karur,Tamil Nadu,33,Z3,Y
+TN-30,Perambalur,Perambalur,Tamil Nadu,33,Z3,Y
+TN-31,Ariyalur,Ariyalur,Tamil Nadu,33,Z3,Y
+TN-32,Thanjavur,Thanjavur,Tamil Nadu,33,Z3,Y
+TN-33,Nagapattinam,Nagapattinam,Tamil Nadu,33,Z3,Y
+TN-34,Tiruvarur,Tiruvarur,Tamil Nadu,33,Z3,Y
+TN-35,Pudukkottai,Pudukkottai,Tamil Nadu,33,Z3,Y
+TG-01,Hyderabad (East),Hyderabad,Telangana,36,Z1,Y
+TG-02,Hyderabad (West),Hyderabad,Telangana,36,Z1,Y
+TG-03,Rangareddy,Hyderabad,Telangana,36,Z2,Y
+TG-04,Medchal,Medchal,Telangana,36,Z2,Y
+TG-05,Warangal,Warangal,Telangana,36,Z2,Y
+TG-06,Karimnagar,Karimnagar,Telangana,36,Z3,Y
+TG-07,Nizamabad,Nizamabad,Telangana,36,Z3,Y
+TG-08,Khammam,Khammam,Telangana,36,Z3,Y
+TR-01,Agartala,Agartala,Tripura,16,Z4,Y
+UP-01,Lucknow,Lucknow,Uttar Pradesh,09,Z1,Y
+UP-02,Kanpur,Kanpur,Uttar Pradesh,09,Z1,Y
+UP-03,Agra,Agra,Uttar Pradesh,09,Z2,Y
+UP-04,Varanasi,Varanasi,Uttar Pradesh,09,Z2,Y
+UP-05,Allahabad,Allahabad,Uttar Pradesh,09,Z2,Y
+UP-06,Meerut,Meerut,Uttar Pradesh,09,Z2,Y
+UP-07,Ghaziabad,Ghaziabad,Uttar Pradesh,09,Z1,Y
+UP-08,Gorakhpur,Gorakhpur,Uttar Pradesh,09,Z2,Y
+UP-09,Bareilly,Bareilly,Uttar Pradesh,09,Z2,Y
+UP-10,Mathura,Mathura,Uttar Pradesh,09,Z2,Y
+UK-01,Dehradun,Dehradun,Uttarakhand,05,Z2,Y
+UK-02,Haridwar,Haridwar,Uttarakhand,05,Z2,Y
+UK-03,Nainital,Haldwani,Uttarakhand,05,Z3,Y
+WB-01,Kolkata,Kolkata,West Bengal,19,Z1,Y
+WB-02,Howrah,Howrah,West Bengal,19,Z1,Y
+WB-03,North 24 Parganas,Barasat,West Bengal,19,Z2,Y
+WB-04,South 24 Parganas,Alipore,West Bengal,19,Z2,Y
+WB-05,Durgapur,Durgapur,West Bengal,19,Z2,Y
+WB-06,Asansol,Asansol,West Bengal,19,Z2,Y
+WB-07,Siliguri,Siliguri,West Bengal,19,Z2,Y

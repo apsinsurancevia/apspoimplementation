@@ -1,0 +1,17 @@
+product_code,product_name,insurer_code,category,vehicle_class,premium_base,tds_applicable,tds_pct,active
+TW-COMP,Two Wheeler Comprehensive,ALL,TW,Two Wheeler,OD,Y,5,Y
+TW-TP,Two Wheeler Third Party,ALL,TW,Two Wheeler,TP,N,0,Y
+TW-SAOD,Two Wheeler Stand-Alone OD,ALL,TW,Two Wheeler,OD,Y,5,Y
+PC-COMP,Private Car Comprehensive,ALL,Pvt Car,Private Car,OD,Y,5,Y
+PC-TP,Private Car Third Party,ALL,Pvt Car,Private Car,TP,N,0,Y
+PC-SAOD,Private Car Stand-Alone OD,ALL,Pvt Car,Private Car,OD,Y,5,Y
+GCV-COMP,Goods Carrying Vehicle Comprehensive,ALL,GCV,GCV,OD,Y,5,Y
+GCV-TP,Goods Carrying Vehicle Third Party,ALL,GCV,GCV,TP,N,0,Y
+PCV-COMP,Passenger Carrying Vehicle Comprehensive,ALL,PCV,PCV,OD,Y,5,Y
+PCV-TP,Passenger Carrying Vehicle Third Party,ALL,PCV,PCV,TP,N,0,Y
+TRAC-COMP,Tractor Comprehensive,ALL,GCV,Tractor,OD,Y,5,Y
+TRAC-TP,Tractor Third Party,ALL,GCV,Tractor,TP,N,0,Y
+MISC-COMP,Miscellaneous D Comprehensive,ALL,Misc D,Misc D,OD,Y,5,Y
+MISC-TP,Miscellaneous D Third Party,ALL,Misc D,Misc D,TP,N,0,Y
+PC-FLEET,Private Car Fleet (Bundled),ALL,Pvt Car,Private Car,NET,Y,5,Y
+GCV-FLEET,GCV Fleet (Bundled),ALL,GCV,GCV,NET,Y,5,Y

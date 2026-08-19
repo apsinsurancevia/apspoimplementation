@@ -48,7 +48,11 @@ function handleAPIRequest(e) {
       policyIssueDate: e.parameter.policyIssueDate || '',
       netPremium:      e.parameter.netPremium      ? parseFloat(e.parameter.netPremium)      : 0,
       odPremium:       e.parameter.odPremium       ? parseFloat(e.parameter.odPremium)       : 0,
-      tpPremium:       e.parameter.tpPremium       ? parseFloat(e.parameter.tpPremium)       : 0
+      tpPremium:       e.parameter.tpPremium       ? parseFloat(e.parameter.tpPremium)       : 0,
+      fuelType:        e.parameter.fuelType        || '',
+      nilDep:          e.parameter.nilDep          || '',
+      ncb:             e.parameter.ncb             || '',
+      yom:             e.parameter.yom             ? parseInt(e.parameter.yom)               : null
     };
     var result = lookupRate(params);
     return ContentService
@@ -132,6 +136,97 @@ function getProductSubTypes(productType) {
   }
 }
 
+/**
+ * Returns complete form configuration in one server call.
+ * Called once on form load — replaces separate getInsurers(),
+ * getProductTypes(), getProductSubTypes() calls.
+ *
+ * @returns {Object} Full form config including insurers, productTypes,
+ *   subTypesByProductType, subSubTypesByProductType, fieldConfig, fuelTypes
+ */
+function getFormConfig() {
+  try {
+    var insurers = getSheetDataAsObjects(CONFIG.SHEET_INSURER_MASTER, 'Insurers');
+    var insurerList = insurers
+      .filter(function(r) { return r.active === 'Y'; })
+      .map(function(r) { return { id: r.insurer_id, name: r.insurer_name }; });
+
+    var products = getSheetDataAsObjects(CONFIG.SHEET_PRODUCT_MASTER, 'Motor');
+    var activeProducts = products.filter(function(r) { return r.active === 'Y'; });
+
+    var seenTypes = {};
+    var productTypes = [];
+    activeProducts.forEach(function(r) {
+      if (r.product_type && !seenTypes[r.product_type]) {
+        seenTypes[r.product_type] = true;
+        productTypes.push(r.product_type);
+      }
+    });
+
+    var subTypesByProductType    = {};
+    var subSubTypesByProductType = {};
+    activeProducts.forEach(function(r) {
+      if (!r.product_type) return;
+
+      if (r.product_sub_type) {
+        if (!subTypesByProductType[r.product_type]) {
+          subTypesByProductType[r.product_type] = [];
+        }
+        var existing = subTypesByProductType[r.product_type];
+        if (existing.indexOf(r.product_sub_type) === -1) {
+          existing.push(r.product_sub_type);
+        }
+      }
+
+      if (r.product_sub_sub_type) {
+        if (!subSubTypesByProductType[r.product_type]) {
+          subSubTypesByProductType[r.product_type] = [];
+        }
+        var existingSub = subSubTypesByProductType[r.product_type];
+        var subSubs = r.product_sub_sub_type.toString().split('/').map(function(s) {
+          return s.trim();
+        });
+        subSubs.forEach(function(ss) {
+          if (ss && existingSub.indexOf(ss) === -1) existingSub.push(ss);
+        });
+      }
+    });
+
+    var fieldConfig = {
+      'TW':               { cc: true,  fuel: true,  subType: true,  subSubType: false, gvw: false, seating: false, yom: false, nilDep: false, ncb: false },
+      'Pvt Car':          { cc: true,  fuel: true,  subType: false, subSubType: false, gvw: false, seating: false, yom: true,  nilDep: true,  ncb: true  },
+      'GCV':              { cc: false, fuel: true,  subType: false, subSubType: false, gvw: true,  seating: false, yom: true,  nilDep: false, ncb: false },
+      'PCV':              { cc: false, fuel: true,  subType: true,  subSubType: true,  gvw: false, seating: true,  yom: true,  nilDep: false, ncb: false },
+      'Tractor':          { cc: false, fuel: false, subType: false, subSubType: false, gvw: false, seating: false, yom: true,  nilDep: false, ncb: false },
+      'Construction Eqpt':{ cc: false, fuel: false, subType: false, subSubType: true,  gvw: false, seating: false, yom: false, nilDep: false, ncb: false }
+    };
+
+    return {
+      insurers:                 insurerList,
+      productTypes:             productTypes,
+      subTypesByProductType:    subTypesByProductType,
+      subSubTypesByProductType: subSubTypesByProductType,
+      fieldConfig:              fieldConfig,
+      fuelTypes:                ['Petrol', 'Diesel', 'Bio Fuel', 'Electric']
+    };
+
+  } catch (e) {
+    throw new Error('getFormConfig failed: ' + e.message);
+  }
+}
+
+/**
+ * Derives vehicle age category from year of manufacture.
+ * New = yom >= current calendar year; Old = yom < current year.
+ *
+ * @param {number} yom - Year of manufacture
+ * @returns {string} 'New' or 'Old'
+ */
+function deriveVehicleAge(yom) {
+  if (!yom) return '';
+  return parseInt(yom) >= new Date().getFullYear() ? 'New' : 'Old';
+}
+
 // ── CORE RATE LOOKUP ENGINE ───────────────────────────────────────────────────
 
 /**
@@ -155,6 +250,7 @@ function lookupRate(params) {
     matchType:   '',
     gridTier:    '',
     matchStatus: 'NO_MATCH',
+    vehicleAge:  '',
     notes:       '',
     piRate:      null,
     piOn:        null,
@@ -290,6 +386,7 @@ function lookupRate(params) {
       matchType:   matchType,
       gridTier:    tierResult.tier,
       matchStatus: 'MATCHED',
+      vehicleAge:  params.yom ? deriveVehicleAge(params.yom) : '',
       notes:       '',
       piRate:      tierResult.piRate,
       piOn:        tierResult.piOn,
@@ -398,7 +495,10 @@ function buildColumnIndex(headers) {
     slab_3_pi_rate:               idx['slab_3__pi_rate']              !== undefined ? idx['slab_3__pi_rate']              : 60,
     slab_3_rate_on:               idx['slab_3_rate_on']               !== undefined ? idx['slab_3_rate_on']               : 61,
     slab_3_retention:             idx['slab_3_retention']             !== undefined ? idx['slab_3_retention']             : 62,
-    slab_3_po_rate:               idx['slab_3__po_rate']              !== undefined ? idx['slab_3__po_rate']              : 63
+    slab_3_po_rate:               idx['slab_3__po_rate']              !== undefined ? idx['slab_3__po_rate']              : 63,
+    fuel_type:                    idx['fuel_type']                    || 11,
+    is_no_claim_bonus_considered: idx['is_no_claim_bonus_considered'] || 28,
+    is_zero_dip_considered:       idx['is_zero_dip_considered']       || 33
   };
 }
 
@@ -462,11 +562,20 @@ function filterByPanIndia(rows, colIdx) {
 }
 
 /**
- * Filters rows by vehicle parameters (CC, GVW, Seating).
- * Only applies filters relevant to the supplied params.
+ * Filters grid rows by vehicle parameters.
+ * Applies filters relevant to each product type:
+ *   CC      — TW and Pvt Car
+ *   GVW     — GCV and Tractor
+ *   Seating — PCV
+ *   Fuel    — TW, Pvt Car, GCV, PCV (when provided)
+ *   Nil Dep — Pvt Car (when provided)
+ *   NCB     — Pvt Car (when provided)
+ * Grid rows with blank filter columns apply to all values — not filtered out.
  */
 function filterByVehicleParams(rows, colIdx, params) {
   return rows.filter(function(row) {
+
+    // ── CC ─────────────────────────────────────────────────────────────────
     if (params.vehicleCc !== null && params.vehicleCc !== undefined) {
       var ccLo = row[colIdx.vehicle_cc_lower_limit];
       var ccHi = row[colIdx.vehicle_cc_upper_limit];
@@ -474,6 +583,8 @@ function filterByVehicleParams(rows, colIdx, params) {
         if (!matchVehicleParam(params.vehicleCc, ccLo, ccHi)) return false;
       }
     }
+
+    // ── GVW ────────────────────────────────────────────────────────────────
     if (params.vehicleGvw !== null && params.vehicleGvw !== undefined) {
       var gvwLo = row[colIdx.gvw_lower_limit];
       var gvwHi = row[colIdx.gvw_upper_limit];
@@ -481,6 +592,8 @@ function filterByVehicleParams(rows, colIdx, params) {
         if (!matchVehicleParam(params.vehicleGvw, gvwLo, gvwHi)) return false;
       }
     }
+
+    // ── Seating ────────────────────────────────────────────────────────────
     if (params.vehicleSeating !== null && params.vehicleSeating !== undefined) {
       var seatLo = row[colIdx.seating_capacity_lower_limit];
       var seatHi = row[colIdx.seating_capacity_upper_limit];
@@ -488,6 +601,44 @@ function filterByVehicleParams(rows, colIdx, params) {
         if (!matchVehicleParam(params.vehicleSeating, seatLo, seatHi)) return false;
       }
     }
+
+    // ── Fuel Type ──────────────────────────────────────────────────────────
+    // Only filter when provided AND the grid row specifies a fuel type.
+    // Rows with blank fuel_type apply to all fuels — do not filter out.
+    if (params.fuelType && params.fuelType !== '') {
+      var gridFuel = row[colIdx.fuel_type];
+      if (gridFuel && gridFuel.toString().trim() !== '') {
+        if (gridFuel.toString().trim().toLowerCase() !==
+            params.fuelType.toString().trim().toLowerCase()) {
+          return false;
+        }
+      }
+    }
+
+    // ── Nil Dep ────────────────────────────────────────────────────────────
+    // Grid col: is_zero_dip_considered (default index 33)
+    if (params.nilDep !== null && params.nilDep !== undefined && params.nilDep !== '') {
+      var gridNilDep = row[colIdx.is_zero_dip_considered];
+      if (gridNilDep && gridNilDep.toString().trim() !== '') {
+        var gridNilDepVal = gridNilDep.toString().trim().toUpperCase();
+        var paramNilDep   = (params.nilDep === true || params.nilDep === 'Y' ||
+                             params.nilDep === 'true') ? 'Y' : 'N';
+        if (gridNilDepVal !== paramNilDep) return false;
+      }
+    }
+
+    // ── NCB ────────────────────────────────────────────────────────────────
+    // Grid col: is_no_claim_bonus_considered (default index 28)
+    if (params.ncb !== null && params.ncb !== undefined && params.ncb !== '') {
+      var gridNcb = row[colIdx.is_no_claim_bonus_considered];
+      if (gridNcb && gridNcb.toString().trim() !== '') {
+        var gridNcbVal = gridNcb.toString().trim().toUpperCase();
+        var paramNcb   = (params.ncb === true || params.ncb === 'Y' ||
+                          params.ncb === 'true') ? 'Y' : 'N';
+        if (gridNcbVal !== paramNcb) return false;
+      }
+    }
+
     return true;
   });
 }

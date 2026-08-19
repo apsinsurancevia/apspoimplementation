@@ -16,9 +16,25 @@ Google Apps Script system for insurance broker commission management.
 - Prompt 10 — Client deployment checklist
 
 ## Deployment
-Each broker is a separate Git branch.
-Only Config.gs changes between deployments.
-See Prompt 10 for full deployment checklist.
+
+See `setup_deployment.md` for the complete client deployment checklist.
+
+Quick start for new client:
+```bash
+git checkout main
+git pull origin main
+git checkout -b [clientcode]-production
+# Fill in src/Config.gs
+# Follow setup_deployment.md Steps 1-14
+```
+
+## Monthly Workflow
+
+See `setup_deployment.md` — Monthly Workflow Reference section.
+
+## Troubleshooting
+
+See `setup_deployment.md` — Troubleshooting Quick Reference section.
 
 ## Key Rules
 - No hardcoded values outside Config.gs

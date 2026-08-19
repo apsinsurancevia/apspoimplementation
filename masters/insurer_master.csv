@@ -1,16 +1,10 @@
-insurer_code,insurer_name,gstin,state,state_code,finance_email,address,active
-NIA,New India Assurance Co Ltd,27AAACN0027H1ZC,Maharashtra,27,finance@newindia.co.in,"87 M.G. Road, Fort, Mumbai - 400 001",Y
-OIC,Oriental Insurance Co Ltd,07AAACO0041H1ZB,Delhi,07,ho@orientalinsurance.org.in,"Oriental House, A-25/27, Asaf Ali Road, New Delhi - 110 002",Y
-UII,United India Insurance Co Ltd,33AAACU0016H1ZF,Tamil Nadu,33,headoffice@uiic.co.in,"24 Whites Road, Chennai - 600 014",Y
-NICL,National Insurance Co Ltd,19AAACN0033H1ZO,West Bengal,19,customer.care@nationalinsurance.nic.in,"3 Middleton Street, Kolkata - 700 071",Y
-HDFC,HDFC ERGO General Insurance Co Ltd,27AABCH0245H1ZP,Maharashtra,27,customerfirst@hdfcergo.com,"D-301, 3rd Floor, Eastern Business District, Neptune Magnet Mall, LBS Marg, Bhandup West, Mumbai - 400 078",Y
-BAJA,Bajaj Allianz General Insurance Co Ltd,27AAACB0376H1Z8,Maharashtra,27,customercare@bajajallianz.co.in,"GE Plaza, Airport Road, Yerawada, Pune - 411 006",Y
-ICICIL,ICICI Lombard General Insurance Co Ltd,27AAACI1603H1ZT,Maharashtra,27,customersupport@icicilombard.com,"ICICI Lombard House, 414, Veer Savarkar Marg, Near Siddhivinayak Temple, Prabhadevi, Mumbai - 400 025",Y
-RELI,Reliance General Insurance Co Ltd,27AAACR1681H1ZB,Maharashtra,27,rgicustomerservice@relianceada.com,"570, Rectifier House, Naigaon Cross Road, Wadala, Mumbai - 400 031",Y
-TATA,Tata AIG General Insurance Co Ltd,27AACCT0685H1ZB,Maharashtra,27,customersupport@tataaig.com,"Peninsula Business Park, Tower A, 15th Floor, G.K. Marg, Lower Parel, Mumbai - 400 013",Y
-DIGIT,Go Digit General Insurance Ltd,29AABCG1015N1Z7,Karnataka,29,hello@godigit.com,"Vatika Business Centre, 4th Floor, Mons Chambers, 12 M.G. Road, Bangalore - 560 001",Y
-ACKO,Acko General Insurance Ltd,29AANCA3741C1ZS,Karnataka,29,support@acko.com,"2nd Floor, #36/5, Hustlehub One East, Somasundarapalya Main Rd, Sector 2, HSR Layout, Bengaluru - 560 102",Y
-KOTAK,Kotak Mahindra General Insurance Co Ltd,27AABCK0867G1ZN,Maharashtra,27,customercare@kotak.com,"27BKC, C-27, G Block, Bandra Kurla Complex, Bandra (East), Mumbai - 400 051",Y
-FUTURE,Future Generali India Insurance Co Ltd,27AABCF1700A1ZE,Maharashtra,27,fgcare@futuregenerali.in,"Unit 801 and 802, 8th floor, Tower C, Embassy 247, LBS Marg, Vikhroli (West), Mumbai - 400 083",Y
-ROYAL,Royal Sundaram General Insurance Co Ltd,33AAACR4152D1ZR,Tamil Nadu,33,customer.services@royalsundaram.in,"Vishranthi Melaram Towers, No.2/319, Rajiv Gandhi Salai (OMR), Karapakkam, Chennai - 600 097",Y
-SHRIRAM,Shriram General Insurance Co Ltd,08AAKCS3104G1ZN,Rajasthan,08,customercare@shriramgi.com,"E-8, EPIP, RIICO Industrial Area, Sitapura, Jaipur - 302 022",Y
+insurer_id,insurer_name,insurer_gstin,insurer_state,insurer_state_code,insurer_address,sac_code,spoc_email,active
+OR,THE ORIENTAL INSURANCE CO LTD,[GSTIN_PLACEHOLDER],DELHI,DL,[ADDRESS_PLACEHOLDER],997131,[SPOC_PLACEHOLDER],Y
+NIC,NATIONAL INSURANCE CO LTD,[GSTIN_PLACEHOLDER],WEST BENGAL,WB,[ADDRESS_PLACEHOLDER],997131,[SPOC_PLACEHOLDER],Y
+UIIC,UNITED INDIA INSURANCE CO LTD,[GSTIN_PLACEHOLDER],TAMILNADU,TN,[ADDRESS_PLACEHOLDER],997131,[SPOC_PLACEHOLDER],Y
+USGI,UNIVERSAL SOMPO GENERAL INSURANCE CO LTD,[GSTIN_PLACEHOLDER],MAHARASHTRA,MH,[ADDRESS_PLACEHOLDER],997131,[SPOC_PLACEHOLDER],Y
+TATA,TATA AIG GENERAL INSURANCE CO LTD,[GSTIN_PLACEHOLDER],MAHARASHTRA,MH,[ADDRESS_PLACEHOLDER],997131,[SPOC_PLACEHOLDER],Y
+BAJAJ,BAJAJ ALLIANZ GENERAL INSURANCE CO LTD,[GSTIN_PLACEHOLDER],MAHARASHTRA,MH,[ADDRESS_PLACEHOLDER],997131,[SPOC_PLACEHOLDER],Y
+GO,GO DIGIT GENERAL INSURANCE LTD,[GSTIN_PLACEHOLDER],KARNATAKA,KA,[ADDRESS_PLACEHOLDER],997131,[SPOC_PLACEHOLDER],Y
+INDUSIND,INDUSIND BANK GENERAL INSURANCE CO LTD,[GSTIN_PLACEHOLDER],[STATE_PLACEHOLDER],[CODE_PLACEHOLDER],[ADDRESS_PLACEHOLDER],997131,[SPOC_PLACEHOLDER],Y
+NIA,THE NEW INDIA ASSURANCE CO LTD,[GSTIN_PLACEHOLDER],MAHARASHTRA,MH,[ADDRESS_PLACEHOLDER],997131,[SPOC_PLACEHOLDER],Y

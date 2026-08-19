@@ -1,17 +1,19 @@
-product_code,product_name,insurer_code,category,vehicle_class,premium_base,tds_applicable,tds_pct,active
-TW-COMP,Two Wheeler Comprehensive,ALL,TW,Two Wheeler,OD,Y,5,Y
-TW-TP,Two Wheeler Third Party,ALL,TW,Two Wheeler,TP,N,0,Y
-TW-SAOD,Two Wheeler Stand-Alone OD,ALL,TW,Two Wheeler,OD,Y,5,Y
-PC-COMP,Private Car Comprehensive,ALL,Pvt Car,Private Car,OD,Y,5,Y
-PC-TP,Private Car Third Party,ALL,Pvt Car,Private Car,TP,N,0,Y
-PC-SAOD,Private Car Stand-Alone OD,ALL,Pvt Car,Private Car,OD,Y,5,Y
-GCV-COMP,Goods Carrying Vehicle Comprehensive,ALL,GCV,GCV,OD,Y,5,Y
-GCV-TP,Goods Carrying Vehicle Third Party,ALL,GCV,GCV,TP,N,0,Y
-PCV-COMP,Passenger Carrying Vehicle Comprehensive,ALL,PCV,PCV,OD,Y,5,Y
-PCV-TP,Passenger Carrying Vehicle Third Party,ALL,PCV,PCV,TP,N,0,Y
-TRAC-COMP,Tractor Comprehensive,ALL,GCV,Tractor,OD,Y,5,Y
-TRAC-TP,Tractor Third Party,ALL,GCV,Tractor,TP,N,0,Y
-MISC-COMP,Miscellaneous D Comprehensive,ALL,Misc D,Misc D,OD,Y,5,Y
-MISC-TP,Miscellaneous D Third Party,ALL,Misc D,Misc D,TP,N,0,Y
-PC-FLEET,Private Car Fleet (Bundled),ALL,Pvt Car,Private Car,NET,Y,5,Y
-GCV-FLEET,GCV Fleet (Bundled),ALL,GCV,GCV,NET,Y,5,Y
+product_vertical,product_type,product_sub_type,product_sub_sub_type,policy_type,active
+Motor,TW,New (1+5),Scooter/Bike,New Business,Y
+Motor,TW,New (5+5),Scooter/Bike,New Business,Y
+Motor,TW,1+1,Scooter/Bike,New Business / Renewal,Y
+Motor,TW,SAOD,Scooter/Bike,New Business / Renewal,Y
+Motor,TW,SATP,Scooter/Bike,New Business / Renewal,Y
+Motor,Pvt Car,New (1+3),,New Business,Y
+Motor,Pvt Car,New (3+3),,New Business,Y
+Motor,Pvt Car,1+1,,New Business / Renewal,Y
+Motor,Pvt Car,SAOD,,New Business / Renewal,Y
+Motor,Pvt Car,SATP,,New Business / Renewal,Y
+Motor,GCV,1+1,"3W / Tanker / Water Tanker / Car Carrier / Flatbed / Oil Tanker",New Business / Renewal,Y
+Motor,GCV,SATP,"3W / Tanker / Water Tanker / Car Carrier / Flatbed / Oil Tanker",New Business / Renewal,Y
+Motor,PCV,1+1,"3W / Taxi 4+1 / Taxi 5+1 / Taxi>7 / Bus<12 / Bus>12<36 / Bus>36 / School Bus / Staff Bus",New Business / Renewal,Y
+Motor,PCV,SATP,"3W / Taxi 4+1 / Bus<12 / Bus>36 / School Bus / Staff Bus",New Business / Renewal,Y
+Misc D,Tractor,1+1,"Excavator / Harvester / Agri Tractor",New Business / Renewal,Y
+Misc D,Tractor,SATP,"Excavator / Harvester / Agri Tractor",New Business / Renewal,Y
+Misc D,Construction Eqpt,1+1,,New Business / Renewal,Y
+Misc D,Construction Eqpt,SATP,,New Business / Renewal,Y

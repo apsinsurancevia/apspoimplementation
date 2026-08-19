@@ -1,15 +1,7 @@
-# Clasp auth — contains OAuth tokens, never commit
-.clasprc.json
-~/.clasprc.json
-
-# Node (not used but guard against accidental init)
+.clasp.json
+*.key
+*.env
+.env
 node_modules/
-package-lock.json
-
-# OS
-.DS_Store
 Thumbs.db
-
-# Editor
-.vscode/
-*.swp
+.DS_Store

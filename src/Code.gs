@@ -1,36 +1,58 @@
-// Code.gs — entry points (populated in later prompts)
-// Prompt 00 placeholder — safe to push
+/**
+ * CaliberPO — Main Router
+ *
+ * Entry point for all Web App requests.
+ * Routes to appropriate handler based on request parameters.
+ * All other business logic lives in dedicated .gs files.
+ */
 
-function onOpen() {
+/**
+ * Web App entry point — handles all GET requests.
+ * Routes: api=true → JSON API handler, otherwise → Rate Lookup HTML form
+ */
+function doGet(e) {
   try {
-    SpreadsheetApp.getUi()
-      .createMenu("CaliberPO")
-      .addItem("Open Rate Lookup", "openRateLookup")
-      .addSeparator()
-      .addItem("Run Commission Application", "runCommissionApplication")
-      .addItem("Generate Partner Statements", "generatePartnerStatements")
-      .addItem("Generate Insurer Invoices", "generateInsurerInvoices")
-      .addItem("Run Reconciliation", "runReconciliation")
-      .addToUi();
-  } catch (e) {
-    throw new Error("[onOpen] failed: " + e.message);
+    if (e && e.parameter && e.parameter.api === 'true') {
+      return handleAPIRequest(e);
+    }
+    return HtmlService
+      .createHtmlOutputFromFile('index')
+      .setTitle('CaliberPO Rate Lookup')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-function openRateLookup() {
+/**
+ * Handles API requests from system integrations.
+ * Expects parameters: api=true, insurerId, productType, productSubType,
+ * rto, policyIssueDate, and optional premium fields.
+ */
+function handleAPIRequest(e) {
   try {
-    var html = HtmlService.createHtmlOutputFromFile("index")
-      .setWidth(800)
-      .setHeight(600)
-      .setTitle("Rate Lookup");
-    SpreadsheetApp.getUi().showModalDialog(html, "Rate Lookup");
-  } catch (e) {
-    throw new Error("[openRateLookup] failed: " + e.message);
+    var params = {
+      insurerId:       e.parameter.insurerId       || '',
+      productType:     e.parameter.productType     || '',
+      productSubType:  e.parameter.productSubType  || '',
+      rto:             e.parameter.rto             || '',
+      vehicleCc:       parseFloat(e.parameter.vehicleCc)    || null,
+      vehicleGvw:      parseFloat(e.parameter.vehicleGvw)   || null,
+      vehicleSeating:  parseFloat(e.parameter.vehicleSeating) || null,
+      policyIssueDate: e.parameter.policyIssueDate || '',
+      netPremium:      parseFloat(e.parameter.netPremium)   || 0,
+      odPremium:       parseFloat(e.parameter.odPremium)    || 0,
+      tpPremium:       parseFloat(e.parameter.tpPremium)    || 0
+    };
+    var result = lookupRate(params);
+    return ContentService
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
-
-// Stubs — implemented in subsequent prompts
-function runCommissionApplication()  { throw new Error("Not yet implemented — see CommissionApplication.gs"); }
-function generatePartnerStatements() { throw new Error("Not yet implemented — see PayoutGeneration.gs"); }
-function generateInsurerInvoices()   { throw new Error("Not yet implemented — see PayoutGeneration.gs"); }
-function runReconciliation()         { throw new Error("Not yet implemented — see Reconciliation.gs"); }

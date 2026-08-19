@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CaliberPO — Rate Lookup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f0f4fa;
+    color: #222;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  .container {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .header {
+    background: #1a1a2e;
+    color: #fff;
+    border-radius: 10px 10px 0 0;
+    padding: 20px 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .header-logo {
+    font-size: 22px;
+    font-weight: 800;
+    color: #4da6ff;
+    letter-spacing: 1px;
+  }
+
+  .header-sub {
+    font-size: 13px;
+    color: #aac4e8;
+    margin-top: 2px;
+  }
+
+  .card {
+    background: #fff;
+    border-radius: 0 0 10px 10px;
+    padding: 28px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .form-group.full-width {
+    grid-column: 1 / -1;
+  }
+
+  label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  label .required {
+    color: #e53e3e;
+    margin-left: 2px;
+  }
+
+  select, input[type="text"], input[type="number"], input[type="date"] {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid #d1d9e6;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #222;
+    background: #fff;
+    transition: border-color 0.2s;
+    appearance: auto;
+  }
+
+  select:focus, input:focus {
+    outline: none;
+    border-color: #0066cc;
+    box-shadow: 0 0 0 3px rgba(0,102,204,0.1);
+  }
+
+  .section-divider {
+    grid-column: 1 / -1;
+    border: none;
+    border-top: 1px dashed #d1d9e6;
+    margin: 4px 0;
+  }
+
+  .section-label {
+    grid-column: 1 / -1;
+    font-size: 11px;
+    font-weight: 700;
+    color: #0066cc;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: -8px;
+  }
+
+  .btn-lookup {
+    width: 100%;
+    padding: 12px;
+    background: #0066cc;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-lookup:hover { background: #0052a3; }
+  .btn-lookup:disabled { background: #99b8d9; cursor: not-allowed; }
+
+  .hidden { display: none !important; }
+
+  .result-panel {
+    margin-top: 24px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1.5px solid #d1d9e6;
+  }
+
+  .result-header {
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .result-header.matched   { background: #e6f4ea; border-bottom: 2px solid #2e7d32; }
+  .result-header.pan-india { background: #e3f0ff; border-bottom: 2px solid #0066cc; }
+  .result-header.no-match  { background: #fdecea; border-bottom: 2px solid #c62828; }
+  .result-header.error     { background: #fff3e0; border-bottom: 2px solid #e65100; }
+  .result-header.duplicate { background: #fff8e1; border-bottom: 2px solid #f9a825; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .badge.exact   { background: #2e7d32; color: #fff; }
+  .badge.pan     { background: #0066cc; color: #fff; }
+  .badge.nomatch { background: #c62828; color: #fff; }
+  .badge.error   { background: #e65100; color: #fff; }
+  .badge.dup     { background: #f9a825; color: #fff; }
+
+  .result-body { padding: 18px; background: #fff; }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .result-item { display: flex; flex-direction: column; gap: 2px; }
+  .result-label { font-size: 11px; color: #777; font-weight: 600; text-transform: uppercase; }
+  .result-value { font-size: 16px; font-weight: 700; color: #1a1a2e; }
+  .result-value.amount { color: #0066cc; font-size: 18px; }
+  .result-value.pi     { color: #555; }
+
+  .result-notes {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #f8f8f8;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #555;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 3px solid #d1d9e6;
+    border-top-color: #0066cc;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .tier-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #e3f0ff;
+    color: #0066cc;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div>
+      <div class="header-logo">CaliberPO</div>
+      <div class="header-sub">Commission Rate Lookup</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="form-grid">
+
+      <div class="section-label">Policy Details</div>
+
+      <div class="form-group">
+        <label>Insurer <span class="required">*</span></label>
+        <select id="insurerId">
+          <option value="">Loading...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Policy Issue Date <span class="required">*</span></label>
+        <input type="date" id="policyIssueDate">
+      </div>
+
+      <div class="form-group">
+        <label>Product Type <span class="required">*</span></label>
+        <select id="productType">
+          <option value="">Select product type</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Product Sub Type</label>
+        <select id="productSubType">
+          <option value="">Select product type first</option>
+        </select>
+      </div>
+
+      <hr class="section-divider">
+      <div class="section-label">Vehicle &amp; Location</div>
+
+      <div class="form-group">
+        <label>RTO Code</label>
+        <input type="text" id="rto" placeholder="e.g. MH-01">
+      </div>
+
+      <div class="form-group" id="ccGroup">
+        <label>Engine CC</label>
+        <input type="number" id="vehicleCc" placeholder="e.g. 125">
+      </div>
+
+      <div class="form-group hidden" id="gvwGroup">
+        <label>GVW (tonnes)</label>
+        <input type="number" id="vehicleGvw" placeholder="e.g. 7.5" step="0.1">
+      </div>
+
+      <div class="form-group hidden" id="seatingGroup">
+        <label>Seating Capacity</label>
+        <input type="number" id="vehicleSeating" placeholder="e.g. 13">
+      </div>
+
+      <hr class="section-divider">
+      <div class="section-label">Premium (optional — for amount calculation)</div>
+
+      <div class="form-group">
+        <label>Net Premium (&#8377;)</label>
+        <input type="number" id="netPremium" placeholder="0.00" step="0.01">
+      </div>
+
+      <div class="form-group">
+        <label>OD Premium (&#8377;)</label>
+        <input type="number" id="odPremium" placeholder="0.00" step="0.01">
+      </div>
+
+      <div class="form-group">
+        <label>TP Premium (&#8377;)</label>
+        <input type="number" id="tpPremium" placeholder="0.00" step="0.01">
+      </div>
+
+    </div>
+
+    <button class="btn-lookup" id="lookupBtn" onclick="doLookup()">
+      Get Rate
+    </button>
+
+    <div class="result-panel hidden" id="resultPanel">
+      <div class="result-header" id="resultHeader">
+        <span class="badge" id="matchBadge"></span>
+        <span id="matchLabel"></span>
+        <span class="tier-badge hidden" id="tierBadge"></span>
+      </div>
+      <div class="result-body">
+        <div class="result-grid" id="resultGrid"></div>
+        <div class="result-notes hidden" id="resultNotes"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+window.onload = function() {
+  var today = new Date();
+  var yyyy  = today.getFullYear();
+  var mm    = String(today.getMonth() + 1).padStart(2, '0');
+  var dd    = String(today.getDate()).padStart(2, '0');
+  document.getElementById('policyIssueDate').value = yyyy + '-' + mm + '-' + dd;
+
+  google.script.run
+    .withSuccessHandler(populateInsurers)
+    .withFailureHandler(function(e) {
+      document.getElementById('insurerId').innerHTML =
+        '<option value="">Error loading insurers</option>';
+    })
+    .getInsurers();
+
+  google.script.run
+    .withSuccessHandler(populateProductTypes)
+    .withFailureHandler(function(e) {
+      document.getElementById('productType').innerHTML =
+        '<option value="">Error loading products</option>';
+    })
+    .getProductTypes();
+};
+
+function populateInsurers(insurers) {
+  var sel = document.getElementById('insurerId');
+  sel.innerHTML = '<option value="">&#8212; Select Insurer &#8212;</option>';
+  insurers.forEach(function(ins) {
+    var opt = document.createElement('option');
+    opt.value = ins.id;
+    opt.textContent = ins.name;
+    sel.appendChild(opt);
+  });
+}
+
+function populateProductTypes(types) {
+  var sel = document.getElementById('productType');
+  sel.innerHTML = '<option value="">&#8212; Select Product Type &#8212;</option>';
+  types.forEach(function(t) {
+    var opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = t;
+    sel.appendChild(opt);
+  });
+}
+
+document.getElementById('productType').addEventListener('change', function() {
+  var productType = this.value;
+  var subSel = document.getElementById('productSubType');
+  subSel.innerHTML = '<option value="">Loading...</option>';
+
+  var isTW      = productType === 'TW';
+  var isGCV     = productType === 'GCV';
+  var isTractor = productType === 'Tractor' || productType === 'Construction Eqpt';
+  var isPCV     = productType === 'PCV';
+
+  document.getElementById('ccGroup').classList.toggle('hidden', !isTW);
+  document.getElementById('gvwGroup').classList.toggle('hidden', !(isGCV || isTractor));
+  document.getElementById('seatingGroup').classList.toggle('hidden', !isPCV);
+
+  if (!productType) {
+    subSel.innerHTML = '<option value="">&#8212; Select Product Type first &#8212;</option>';
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(subTypes) {
+      subSel.innerHTML = '<option value="">&#8212; Select Sub Type &#8212;</option>';
+      subTypes.forEach(function(st) {
+        var opt = document.createElement('option');
+        opt.value = st;
+        opt.textContent = st;
+        subSel.appendChild(opt);
+      });
+    })
+    .withFailureHandler(function(e) {
+      subSel.innerHTML = '<option value="">Error loading sub types</option>';
+    })
+    .getProductSubTypes(productType);
+});
+
+function doLookup() {
+  var btn = document.getElementById('lookupBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Looking up...';
+
+  var params = {
+    insurerId:       document.getElementById('insurerId').value,
+    productType:     document.getElementById('productType').value,
+    productSubType:  document.getElementById('productSubType').value,
+    rto:             document.getElementById('rto').value.trim(),
+    policyIssueDate: document.getElementById('policyIssueDate').value,
+    vehicleCc:       parseFloat(document.getElementById('vehicleCc').value)      || null,
+    vehicleGvw:      parseFloat(document.getElementById('vehicleGvw').value)     || null,
+    vehicleSeating:  parseFloat(document.getElementById('vehicleSeating').value) || null,
+    netPremium:      parseFloat(document.getElementById('netPremium').value)     || 0,
+    odPremium:       parseFloat(document.getElementById('odPremium').value)      || 0,
+    tpPremium:       parseFloat(document.getElementById('tpPremium').value)      || 0
+  };
+
+  if (!params.insurerId || !params.productType || !params.policyIssueDate) {
+    showError('Please fill in Insurer, Product Type, and Policy Issue Date.');
+    btn.disabled = false;
+    btn.innerHTML = 'Get Rate';
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      showResult(result);
+      btn.disabled = false;
+      btn.innerHTML = 'Get Rate';
+    })
+    .withFailureHandler(function(e) {
+      showError('Server error: ' + e.message);
+      btn.disabled = false;
+      btn.innerHTML = 'Get Rate';
+    })
+    .lookupRate(params);
+}
+
+function showResult(r) {
+  var panel  = document.getElementById('resultPanel');
+  var header = document.getElementById('resultHeader');
+  var badge  = document.getElementById('matchBadge');
+  var label  = document.getElementById('matchLabel');
+  var tier   = document.getElementById('tierBadge');
+  var grid   = document.getElementById('resultGrid');
+  var notes  = document.getElementById('resultNotes');
+
+  panel.classList.remove('hidden');
+  header.className = 'result-header';
+  grid.innerHTML   = '';
+  notes.classList.add('hidden');
+  tier.classList.add('hidden');
+
+  if (!r.success || r.matchStatus === 'NO_MATCH' || r.matchStatus === 'ERROR') {
+    header.classList.add('no-match');
+    badge.className   = 'badge nomatch';
+    badge.textContent = r.matchStatus || 'NO MATCH';
+    label.textContent = r.notes || 'No rate found for this combination.';
+    return;
+  }
+
+  if (r.matchStatus === 'DUPLICATE_RATE') {
+    header.classList.add('duplicate');
+    badge.className   = 'badge dup';
+    badge.textContent = 'DUPLICATE RATE';
+    label.textContent = 'Multiple rates matched — coordinator has been alerted.';
+    addResultNote(notes, r.notes);
+    return;
+  }
+
+  var isExact = r.matchType === 'EXACT_RTO';
+  header.classList.add(isExact ? 'matched' : 'pan-india');
+  badge.className   = 'badge ' + (isExact ? 'exact' : 'pan');
+  badge.textContent = isExact ? 'EXACT RTO' : 'PAN INDIA';
+  label.textContent = isExact ? 'Rate matched to exact RTO' : 'PAN India rate applied';
+
+  if (r.gridTier && r.gridTier !== 'Base') {
+    tier.classList.remove('hidden');
+    tier.textContent = r.gridTier;
+  }
+
+  addResultRow(grid, 'PI Rate', r.piRate ? r.piRate + '%' : '—', 'pi');
+  addResultRow(grid, 'PI On',   r.piOn   || '—',                 'pi');
+
+  if (r.piRate2) {
+    addResultRow(grid, 'PI Rate 2', r.piRate2 + '%', 'pi');
+    addResultRow(grid, 'PI On 2',   r.piOn2  || '—', 'pi');
+  }
+
+  addResultRow(grid, 'PO Rate',   r.poRate   ? r.poRate + '%'                      : '—', '');
+  addResultRow(grid, 'PO Amount', r.poAmount ? '₹' + r.poAmount.toLocaleString('en-IN') : '—', 'amount');
+
+  if (r.poRate2) {
+    addResultRow(grid, 'PO Rate 2',   r.poRate2  ? r.poRate2 + '%'                       : '—', '');
+    addResultRow(grid, 'PO Amount 2', r.poAmount2 ? '₹' + r.poAmount2.toLocaleString('en-IN') : '—', 'amount');
+  }
+
+  if (r.piAmount) {
+    addResultRow(grid, 'PI Amount', '₹' + r.piAmount.toLocaleString('en-IN'), 'pi');
+  }
+
+  if (r.notes) addResultNote(notes, r.notes);
+}
+
+function addResultRow(grid, labelText, valueText, cls) {
+  var item = document.createElement('div');
+  item.className = 'result-item';
+  var lbl = document.createElement('div');
+  lbl.className   = 'result-label';
+  lbl.textContent = labelText;
+  var val = document.createElement('div');
+  val.className   = 'result-value' + (cls ? ' ' + cls : '');
+  val.textContent = valueText;
+  item.appendChild(lbl);
+  item.appendChild(val);
+  grid.appendChild(item);
+}
+
+function addResultNote(notesEl, text) {
+  notesEl.classList.remove('hidden');
+  notesEl.textContent = text;
+}
+
+function showError(msg) {
+  var panel  = document.getElementById('resultPanel');
+  var header = document.getElementById('resultHeader');
+  var badge  = document.getElementById('matchBadge');
+  var label  = document.getElementById('matchLabel');
+  var grid   = document.getElementById('resultGrid');
+
+  panel.classList.remove('hidden');
+  header.className  = 'result-header error';
+  badge.className   = 'badge error';
+  badge.textContent = 'ERROR';
+  label.textContent = msg;
+  grid.innerHTML    = '';
+}
+</script>
+</body>
+</html>

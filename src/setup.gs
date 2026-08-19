@@ -505,11 +505,24 @@ function writeConfigIds(jsonString) {
  */
 function importRTOMaster(csvData) {
   try {
+    if (!csvData || typeof csvData !== 'string' || csvData.trim() === '') {
+      throw new Error(
+        'csvData argument is required. Paste your RTO CSV content as a string argument.\n' +
+        'Usage: importRTOMaster("rto_id,rto_city,...\\n1,Mumbai,...")'
+      );
+    }
+
     var ss = SpreadsheetApp.openById(CONFIG.SHEET_RTO_MASTER);
     var sheet = ss.getSheetByName('RTO');
 
     var rows = Utilities.parseCsv(csvData);
+    if (!rows || rows.length < 2) {
+      throw new Error('CSV appears empty or has no data rows. Check the content passed in.');
+    }
     var headers = rows[0];
+    if (!headers || headers.length === 0) {
+      throw new Error('Could not parse CSV headers. Ensure the first row contains column names.');
+    }
     var dataRows = rows.slice(1);
 
     var rtoIdx = headers.indexOf('VehicleCity_RTOCode');

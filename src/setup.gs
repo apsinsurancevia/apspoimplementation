@@ -593,6 +593,48 @@ function normaliseRTOCode_(code) {
   return code; // return as-is if pattern not recognised
 }
 
+// ── RTO STATE CODE BACKFILL ───────────────────────────────────────────────────
+
+/**
+ * Derives state_code from rto_code for every row in RTO Master that has a
+ * blank state_code. Extracts the 2-letter prefix before the hyphen.
+ * e.g. "MH-01" → "MH", "KA-05" → "KA"
+ *
+ * Run once after manually inserting RTO data without state_code.
+ */
+function backfillRTOStateCodes() {
+  try {
+    var ss = SpreadsheetApp.openById(CONFIG.SHEET_RTO_MASTER);
+    var sheet = ss.getSheetByName('RTO');
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+
+    var rtoCodeIdx   = headers.indexOf('rto_code');
+    var stateCodeIdx = headers.indexOf('state_code');
+
+    if (rtoCodeIdx === -1 || stateCodeIdx === -1) {
+      throw new Error('Could not find rto_code or state_code columns. Check RTO sheet headers.');
+    }
+
+    var updated = 0;
+    for (var i = 1; i < data.length; i++) {
+      var rtoCode   = (data[i][rtoCodeIdx] || '').toString().trim();
+      var stateCode = (data[i][stateCodeIdx] || '').toString().trim();
+
+      if (rtoCode && !stateCode) {
+        var derived = rtoCode.substring(0, 2).toUpperCase();
+        sheet.getRange(i + 1, stateCodeIdx + 1).setValue(derived);
+        updated++;
+      }
+    }
+
+    Logger.log('backfillRTOStateCodes: updated ' + updated + ' rows out of ' + (data.length - 1) + ' total.');
+  } catch (e) {
+    Logger.log('backfillRTOStateCodes failed: ' + e.message);
+    throw new Error('[backfillRTOStateCodes] failed: ' + e.message);
+  }
+}
+
 // ── GRID VALIDATOR ────────────────────────────────────────────────────────────
 
 /**

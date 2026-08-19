@@ -50,28 +50,28 @@ const CONFIG = {
 
   // ── DRIVE FOLDER IDs ──────────────────────────────────────────────────────
   // Populated automatically by setup.gs — do not edit manually
-  FOLDER_ROOT:              "1eTGGOWeTa2UDDW97KWLp8jkbPm3E29ga",
-  FOLDER_GRIDS:             "1RN40wTc9mbm_owpjbMnPR_f6AAQ7-IGb",
-  FOLDER_INPUT:             "1_nreiggRLbt2PVvBHozh9v6MaImAwVcX",
-  FOLDER_OUTPUT:            "1nayKtoQ-A47-7A6js8p2r_ofpTbF9q1p",
-  FOLDER_STATEMENTS:        "1R4ef11FndMPaB0L240X6qdpO42wS-3CG",
-  FOLDER_INVOICES:          "1yNDcN4w0rHGVxf8V9mYxcza-xd09bE89",
-  FOLDER_INVOICES_PARTNER:  "1Tn452gPpTDuVUnD1gOnVH8MRQKcLxQBv",
-  FOLDER_INVOICES_INSURER:  "1EcJtRgvZRfO-0bLnC0X6I4NRwrOJV6Ua",
-  FOLDER_RECONCILIATION:    "16jcqs9iaa3qfKLZNG9TsgtX7dn15AcPp",
-  FOLDER_MASTERS:           "1akKWbEMjT7IYo8IcwUmYOWwRQ5qbXe_7",
-  FOLDER_BACKUP:            "1TEcaSg7dWUVCf-s_Vo4hEJwqFoO-KII3",
-  FOLDER_LOG:               "1DeTkpz83Iy8Ke5xOh27yz50vhauzxZh5",
+  FOLDER_ROOT:              "15_wrWjP0LcE5t0HPyBySMkP75ghflOdI",
+  FOLDER_GRIDS:             "15CJn8xIZBSRBw-e-O8kxZyW0RP7yx2mh",
+  FOLDER_INPUT:             "1vEbWYxKgsfvcgfrvNlA2bt_1zRJZ1FII",
+  FOLDER_OUTPUT:            "1NqXigXR53Itar0Oo9hlskV8qDgcD6wtU",
+  FOLDER_STATEMENTS:        "1MqjFVSbIjbxBtpxGYQmsZhkkCm6YItiJ",
+  FOLDER_INVOICES:          "1C6LYc-ck4JQOeddoGM86_6XhzTD2l9X_",
+  FOLDER_INVOICES_PARTNER:  "1vS7xvWUq1CbKiCaBoB1O1jbN255VBIYp",
+  FOLDER_INVOICES_INSURER:  "1iKB5MI0KeoK-TEfNJtQCVAEg5rseWaL9",
+  FOLDER_RECONCILIATION:    "1tWADGbJ9EJKRl3NeVirAmPkcF7itdXq-",
+  FOLDER_MASTERS:           "1DZHBZFTBMxHVmeW0-RWYomUJ_uM8v1nh",
+  FOLDER_BACKUP:            "1oEX-shlNq9TSe0XIfPRj_pKPpfOs26hI",
+  FOLDER_LOG:               "1TxWyL8SVAxZ1oQUAeiz_yreKIuWwm5q0",
 
   // ── SHEET IDs ─────────────────────────────────────────────────────────────
   // Populated automatically by setup.gs — do not edit manually
-  SHEET_PRODUCT_MASTER:     "1cLy_LOn7r0ycdC5ngt7PGm6eSkyquLHH6dorEpfXBgo",
-  SHEET_RTO_MASTER:         "1MxsTTAb8UGjcnunxxi-pdwm-YXGlzFlg8Zg7CTp8HB4",
-  SHEET_INSURER_MASTER:     "1WifGNspoWlND6DCvI6Hw_VO-_vQ7Bb08uuqPA4Sr96s",
-  SHEET_BROKER_CONFIG:      "1tyQ8DmCMjOx0WykAhz4TU6Mdyy5fdbVYOrQhYz3b5gQ",
-  SHEET_PARTNER_MASTER:     "1MfYrxI-7DNOTeYHYYkB0bOZTlYvh_1mMX4Elxpocalg",
-  SHEET_RECONCILIATION:     "1ImilmSWqnrXKT7cdI3l0D3SH9eDog5ZkAv2Ohy0z08I",
-  SHEET_LOG:                "11Obz7hrSo4RirUY12Z6YY0i6Ba_HpzenpWa-gFT1R0o",
+  SHEET_PRODUCT_MASTER:     "1F0kwAEEurcwrFMFn5AYj-I71ARDkh_j0MoJEAO2eX0s",
+  SHEET_RTO_MASTER:         "1oG8r13qOqj0j1mJlLavxd1_VdTNC3nd9lA6mpaAhqig",
+  SHEET_INSURER_MASTER:     "1GvECCDrVFsp_SXvlEZpL7hhO26sdADBVFQYdoTnRMZw",
+  SHEET_BROKER_CONFIG:      "1xZgKqKHn9uxsVbTnwqe3gIKSA7_nI1J5xML31DqdcKU",
+  SHEET_PARTNER_MASTER:     "1Hmh9URj-FThexpjhTJLuxb0XbuOu_2LZl6nih13Nj5w",
+  SHEET_RECONCILIATION:     "1UxNAsDtlnA7EcJSrsVEnhADS8nxtJLSmPnkaHrD6scg",
+  SHEET_LOG:                "1gp7RgWIANC13n7QP1JKOcl3MiaZiPUDA73ZxLWGxDfQ",
 
   // ── CLAUDE API ────────────────────────────────────────────────────────────
   // API key is NEVER stored here — set in Apps Script Script Properties

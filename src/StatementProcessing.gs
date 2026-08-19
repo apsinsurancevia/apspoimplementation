@@ -114,8 +114,12 @@ function processInsurerStatement(insurerId, fileId) {
 
 /**
  * Extracts content from an insurer statement file.
- * Attempt 1: Drive text export (works for Excel, text-layer PDFs).
- * Attempt 2: Image export (for scanned PDFs).
+ *
+ * Priority order:
+ *   1. Excel / Google Sheets — opened directly via SpreadsheetApp (all sheets
+ *      concatenated as CSV). This is the primary path for most insurers.
+ *   2. PDF text layer — Drive text export for text-layer PDFs.
+ *   3. Image/base64 — fallback for scanned PDFs only.
  *
  * @param {string} fileId    - Drive file ID
  * @param {string} insurerId - For logging only
@@ -125,48 +129,76 @@ function extractStatementContent(fileId, insurerId) {
   try {
     var file     = DriveApp.getFileById(fileId);
     var mimeType = file.getMimeType();
-    var token    = ScriptApp.getOAuthToken();
 
     Logger.log('File MIME type: ' + mimeType);
 
-    // ── Attempt 1: Text export ──────────────────────────────────────────────
-    var textContent = '';
-    try {
-      var exportUrl;
+    var EXCEL_TYPES = [
+      MimeType.GOOGLE_SHEETS,
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel'
+    ];
 
-      if (mimeType === MimeType.GOOGLE_SHEETS ||
-          mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-          mimeType === 'application/vnd.ms-excel') {
-        exportUrl = 'https://docs.google.com/spreadsheets/d/' + fileId +
-          '/export?format=csv';
-      } else if (mimeType === MimeType.PDF || mimeType === 'application/pdf') {
-        exportUrl = 'https://www.googleapis.com/drive/v3/files/' +
-          fileId + '/export?mimeType=text/plain';
-      } else {
-        exportUrl = 'https://www.googleapis.com/drive/v3/files/' +
-          fileId + '?alt=media';
+    // ── Path 1: Excel / Google Sheets ──────────────────────────────────────
+    // SpreadsheetApp.openById() opens both native Google Sheets and uploaded
+    // .xlsx files transparently — no URL export needed.
+    if (EXCEL_TYPES.indexOf(mimeType) !== -1) {
+      try {
+        var ss      = SpreadsheetApp.openById(fileId);
+        var sheets  = ss.getSheets();
+        var csvParts = [];
+
+        sheets.forEach(function(sheet) {
+          var data = sheet.getDataRange().getValues();
+          if (data.length === 0) return;
+          csvParts.push('=== Sheet: ' + sheet.getName() + ' ===');
+          data.forEach(function(row) {
+            csvParts.push(
+              row.map(function(cell) {
+                var s = cell !== null && cell !== undefined ? cell.toString() : '';
+                return s.indexOf(',') !== -1 || s.indexOf('"') !== -1
+                  ? '"' + s.replace(/"/g, '""') + '"'
+                  : s;
+              }).join(',')
+            );
+          });
+        });
+
+        var textContent = csvParts.join('\n');
+        if (textContent.trim().length > 50) {
+          Logger.log('Excel extraction: ' + sheets.length + ' sheet(s), ' +
+            textContent.length + ' chars');
+          return { type: 'text', content: textContent, mimeType: 'text/plain' };
+        }
+      } catch (xlsErr) {
+        Logger.log('SpreadsheetApp open failed: ' + xlsErr.message);
       }
-
-      var textResponse = UrlFetchApp.fetch(exportUrl, {
-        headers:            { Authorization: 'Bearer ' + token },
-        muteHttpExceptions: true
-      });
-
-      if (textResponse.getResponseCode() === 200) {
-        textContent = textResponse.getContentText();
-      }
-    } catch (textErr) {
-      Logger.log('Text export attempt failed: ' + textErr.message);
     }
 
-    // If text content is substantial (>200 chars) use it
+    // ── Path 2: PDF text layer ──────────────────────────────────────────────
+    var textContent = '';
+    if (mimeType === MimeType.PDF || mimeType === 'application/pdf') {
+      try {
+        var token       = ScriptApp.getOAuthToken();
+        var textResponse = UrlFetchApp.fetch(
+          'https://www.googleapis.com/drive/v3/files/' +
+          fileId + '/export?mimeType=text/plain',
+          { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true }
+        );
+        if (textResponse.getResponseCode() === 200) {
+          textContent = textResponse.getContentText();
+        }
+      } catch (pdfErr) {
+        Logger.log('PDF text export failed: ' + pdfErr.message);
+      }
+    }
+
     if (textContent && textContent.trim().length > 200) {
-      Logger.log('Using text extraction (' + textContent.length + ' chars)');
+      Logger.log('PDF text extraction: ' + textContent.length + ' chars');
       return { type: 'text', content: textContent, mimeType: 'text/plain' };
     }
 
-    // ── Attempt 2: Image/binary export (for scanned PDFs) ──────────────────
-    Logger.log('Text extraction insufficient — attempting image extraction');
+    // ── Path 3: Image/base64 (scanned PDFs only) ───────────────────────────
+    Logger.log('Text extraction insufficient — falling back to image extraction');
 
     if (CONFIG.EMAIL_COORDINATOR) {
       try {

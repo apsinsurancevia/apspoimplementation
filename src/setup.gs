@@ -212,7 +212,11 @@ function runSetup() {
 // ── FOLDER CREATION ───────────────────────────────────────────────────────────
 
 function createFolderStructure_() {
-  var root = getOrCreateFolder_(DriveApp.getRootFolder(), 'CaliberPO');
+  // Use the folder that contains this script — works for every deployment
+  var scriptFile = DriveApp.getFileById(ScriptApp.getScriptId());
+  var root = scriptFile.getParents().next();
+  Logger.log('Root folder: ' + root.getName() + ' (' + root.getId() + ')');
+
   var folders = {
     ROOT:            root.getId(),
     MASTERS:         getOrCreateFolder_(root, 'Masters').getId(),
@@ -495,6 +499,27 @@ function writeConfigIds(jsonString) {
 }
 
 // ── RTO MASTER IMPORTER ───────────────────────────────────────────────────────
+
+/**
+ * Convenience wrapper: reads CSV from a Drive file, then calls importRTOMaster().
+ * Upload your rto_master.csv to the Input folder in Drive, then paste its file ID here.
+ *
+ * Usage: importRTOMasterFromDrive('PASTE_FILE_ID_HERE')
+ */
+function importRTOMasterFromDrive(fileId) {
+  try {
+    if (!fileId || fileId.trim() === '') {
+      throw new Error('fileId is required. Open the CSV in Drive, copy the ID from the URL, and pass it here.');
+    }
+    var file = DriveApp.getFileById(fileId);
+    var csvData = file.getBlob().getDataAsString();
+    Logger.log('Read file: ' + file.getName() + ' (' + csvData.length + ' chars)');
+    importRTOMaster(csvData);
+  } catch (e) {
+    Logger.log('importRTOMasterFromDrive failed: ' + e.message);
+    throw new Error('[importRTOMasterFromDrive] failed: ' + e.message);
+  }
+}
 
 /**
  * Imports RTO data into the RTO Master sheet.

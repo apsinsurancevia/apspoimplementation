@@ -34,7 +34,9 @@ function logCall(params, result, callerType, responseMs) {
       result.matchType      || '',                       // match_type
       result.matchStatus    || '',                       // match_status
       responseMs            || 0,                        // response_ms
-      result.notes          || ''                        // notes
+      result.notes          || '',                       // notes
+      params.fuelType       || '',                       // fuel_type
+      params.yom            || ''                        // yom
     ];
     appendRow(CONFIG.SHEET_LOG, 'Log_Active', row);
   } catch (e) {

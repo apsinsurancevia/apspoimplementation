@@ -423,7 +423,8 @@ function createLogSheet_(folderId) {
   // Tab 1: Log_Active
   setupTab_(ss, 'Log_Active', [
     'timestamp','function_name','caller_type','insurer_id',
-    'product_type','rto','match_type','match_status','response_ms','notes'
+    'product_type','rto','match_type','match_status','response_ms','notes',
+    'fuel_type','yom'
   ], '#1a1a2e', '#FFFFFF');
 
   // Tab 2: Log_Summary

@@ -17,7 +17,7 @@
  */
 function doGet(e) {
   try {
-    if (e && e.parameter && e.parameter.api === 'true') {
+    if (e && e.parameter && (e.parameter.api === 'true' || e.parameter.mode === 'api')) {
       return handleAPIRequest(e);
     }
     return HtmlService
@@ -40,7 +40,8 @@ function handleAPIRequest(e) {
     var params = {
       insurerId:       e.parameter.insurerId       || '',
       productType:     e.parameter.productType     || '',
-      productSubType:  e.parameter.productSubType  || '',
+      productSubType:    e.parameter.productSubType    || '',
+      productSubSubType: e.parameter.productSubSubType || '',
       rto:             e.parameter.rto             || '',
       vehicleCc:       e.parameter.vehicleCc       ? parseFloat(e.parameter.vehicleCc)       : null,
       vehicleGvw:      e.parameter.vehicleGvw      ? parseFloat(e.parameter.vehicleGvw)      : null,
@@ -318,6 +319,11 @@ function lookupRate(params) {
       productRows = dateValidRows; // fall back to all date-valid rows
     }
 
+    // Step 2b: Filter by product sub-sub-type (PCV variants, Construction Eqpt)
+    var subSubRows = filterByProductSubSubType(productRows, colIdx, params.productSubSubType);
+    if (subSubRows.length > 0) productRows = subSubRows;
+    // no fallback — if no sub-sub-type provided or no column in grid, productRows unchanged
+
     // Step 3: Pass 1 — Exact RTO match
     var matchedRows = [];
     var matchType   = '';
@@ -458,6 +464,7 @@ function buildColumnIndex(headers) {
     insurance_company:            idx['insurance_company']            !== undefined ? idx['insurance_company']            : 0,
     product_type:                 idx['product_type']                 !== undefined ? idx['product_type']                 : 3,
     product_sub_type:             idx['product_sub_type']             !== undefined ? idx['product_sub_type']             : 4,
+    product_sub_sub_type:         idx['product_sub_sub_type']         !== undefined ? idx['product_sub_sub_type']         : 5,
     effective_from_date:          idx['effective_from_date']          !== undefined ? idx['effective_from_date']          : 7,
     effective_to_date:            idx['effective_to_date']            !== undefined ? idx['effective_to_date']            : 8,
     vehicle_cc_lower_limit:       idx['vehicle_cc_lower_limit']       !== undefined ? idx['vehicle_cc_lower_limit']       : 14,
@@ -529,6 +536,21 @@ function filterByProductSubType(rows, colIdx, productSubType) {
     if (!cellVal) return true;
     return cellVal.toString().trim().toLowerCase() ===
            productSubType.toString().trim().toLowerCase();
+  });
+}
+
+/**
+ * Filters grid rows by product sub-sub-type.
+ * Blank grid cells pass through (apply to all sub-sub-types).
+ * Returns unchanged rows if productSubSubType is empty.
+ */
+function filterByProductSubSubType(rows, colIdx, productSubSubType) {
+  if (!productSubSubType) return rows;
+  return rows.filter(function(row) {
+    var cellVal = row[colIdx.product_sub_sub_type];
+    if (!cellVal) return true;
+    return cellVal.toString().trim().toLowerCase() ===
+           productSubSubType.toString().trim().toLowerCase();
   });
 }
 

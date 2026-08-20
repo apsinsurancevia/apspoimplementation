@@ -246,7 +246,7 @@ function runCommissionBatch() {
       statusCounts: statusCounts,
       outputFile:   outputFileName
     };
-  });
+  }, 'MANUAL');
 }
 
 // ── TARGETED RE-RUN ───────────────────────────────────────────────────────────
@@ -338,7 +338,7 @@ function runByStatus(status) {
     }
 
     return { reprocessed: reprocessed, nowMatched: nowMatched };
-  });
+  }, 'MANUAL');
 }
 
 // ── ROW PROCESSING ────────────────────────────────────────────────────────────

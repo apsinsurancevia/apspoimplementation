@@ -76,6 +76,12 @@ const CONFIG = {
   // ── CLAUDE API ────────────────────────────────────────────────────────────
   // API key is NEVER stored here — set in Apps Script Script Properties
   // Project Settings → Script Properties → Key: CLAUDE_API_KEY
+
+  // ── MONITORING (set in Script Properties — never in code) ─────────────────
+  // MONITORING_ENDPOINT — Web App URL of the NovoUp CommandCentre receiver
+  //                       Append ?key=MONITORING_KEY when posting — do NOT
+  //                       embed the key in this URL.
+  // MONITORING_KEY      — Shared secret validated by CentralReceiver.doPost()
   CLAUDE_MODEL:             "claude-sonnet-4-6",
   CLAUDE_MAX_TOKENS:        4096,
 

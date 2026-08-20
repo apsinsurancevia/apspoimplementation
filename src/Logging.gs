@@ -45,6 +45,46 @@ function logCall(params, result, callerType, responseMs) {
   }
 }
 
+// ── RUN-LEVEL EVENT LOGGING ───────────────────────────────────────────────────
+
+/**
+ * Logs a run-level operational event to the Run_Log tab.
+ * Called automatically by wrapWithErrorHandling for every instrumented function.
+ * Never throws — a logging failure must never crash the calling function.
+ *
+ * @param {string}  functionName   - Name of the function being logged
+ * @param {string}  triggerType    - MANUAL | TIME_TRIGGER | API
+ * @param {string}  runStatus      - STARTED | COMPLETE | FAILED
+ * @param {string|null} errorMessage  - Error message; null unless FAILED
+ * @param {string|null} errorFunction - Sub-function where error occurred; null unless FAILED
+ * @param {Date|null}   startTimestamp - Start time for duration calc; null on STARTED rows
+ */
+function logRunEvent(functionName, triggerType, runStatus, errorMessage, errorFunction, startTimestamp) {
+  try {
+    var ss    = SpreadsheetApp.openById(CONFIG.SHEET_LOG);
+    var sheet = ss.getSheetByName('Run_Log');
+    if (!sheet) return; // tab not yet created (e.g. pre-setup) — fail silently
+
+    var durationSeconds = (startTimestamp instanceof Date)
+      ? Math.round((new Date() - startTimestamp) / 1000)
+      : null;
+
+    // Call sheet.appendRow() directly — NOT via SheetUtils.appendRow()
+    // because SheetUtils holds LockService and we may already be inside a lock.
+    sheet.appendRow([
+      new Date().toISOString(),   // timestamp
+      functionName  || '',        // function_name
+      triggerType   || 'MANUAL',  // trigger_type
+      runStatus     || '',        // run_status
+      errorMessage  || null,      // error_message
+      errorFunction || null,      // error_function
+      durationSeconds             // duration_seconds (null on STARTED rows)
+    ]);
+  } catch (e) {
+    Logger.log('logRunEvent failed (non-fatal): ' + e.message);
+  }
+}
+
 // ── ERROR LOGGING & ALERTING ──────────────────────────────────────────────────
 
 /**
@@ -132,14 +172,24 @@ function logInfo(functionName, message) {
  * @param {Function} fn           - Function to execute
  * @returns {*} Return value of fn(), or null on error
  */
-function wrapWithErrorHandling(functionName, fn) {
+function wrapWithErrorHandling(functionName, fn, triggerType) {
+  var runStart = new Date();
+  var tType = triggerType || 'MANUAL';
+  logRunEvent(functionName, tType, 'STARTED', null, null, null);
   try {
     logInfo(functionName, 'Started');
     var result = fn();
     logInfo(functionName, 'Completed successfully');
+    logRunEvent(functionName, tType, 'COMPLETE', null, null, runStart);
     return result;
   } catch (e) {
     logError(functionName, e.message, e.stack);
+    var errFn = '';
+    if (e.stack) {
+      var stackLines = e.stack.split('\n');
+      errFn = (stackLines.length > 1 ? stackLines[1] : stackLines[0] || '').trim();
+    }
+    logRunEvent(functionName, tType, 'FAILED', e.message, errFn, runStart);
     return null;
   }
 }
@@ -272,7 +322,7 @@ function archiveLog() {
 
     logInfo('archiveLog', 'Archived ' + totalCalls + ' rows to ' + tabName);
     Logger.log('archiveLog complete: ' + totalCalls + ' rows → ' + tabName);
-  });
+  }, 'TIME_TRIGGER');
 }
 
 // ── NO-MATCH WEEKLY REPORT ────────────────────────────────────────────────────
@@ -340,7 +390,7 @@ function sendNoMatchReport() {
     );
 
     Logger.log('sendNoMatchReport: sent report — ' + noMatchRows.length + ' no-matches');
-  });
+  }, 'TIME_TRIGGER');
 }
 
 // ── TRIGGER SETUP ─────────────────────────────────────────────────────────────

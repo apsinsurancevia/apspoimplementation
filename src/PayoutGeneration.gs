@@ -204,7 +204,7 @@ function runPayoutGeneration() {
     }
 
     Logger.log('=== PayoutGeneration: Complete ===');
-  });
+  }, 'MANUAL');
 }
 
 // ── COMMISSION STATEMENT GENERATION ──────────────────────────────────────────

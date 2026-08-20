@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CaliberPO CommandCentre</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f0f1a;
+      color: #e8e8f0;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    .header {
+      background: #1a1a2e;
+      border-bottom: 2px solid #2e2e4e;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header-left h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: #fff;
+    }
+    .header-left .subtitle {
+      font-size: 0.75rem;
+      color: #888;
+      margin-top: 2px;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .refresh-info {
+      font-size: 0.75rem;
+      color: #888;
+      text-align: right;
+    }
+    .btn-refresh {
+      background: #2e2e4e;
+      border: 1px solid #4a4a6e;
+      color: #ccc;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: background 0.15s;
+    }
+    .btn-refresh:hover { background: #3e3e5e; }
+    .btn-refresh:disabled { opacity: 0.5; cursor: default; }
+
+    /* ── Summary bar ─────────────────────────────────────────────────────── */
+    .summary-bar {
+      background: #14142a;
+      padding: 10px 24px;
+      display: flex;
+      gap: 20px;
+      border-bottom: 1px solid #2e2e4e;
+      flex-wrap: wrap;
+    }
+    .summary-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-green  { background: #22c55e; }
+    .dot-amber  { background: #f59e0b; }
+    .dot-red    { background: #ef4444; }
+    .dot-grey   { background: #6b7280; }
+
+    /* ── Main content ────────────────────────────────────────────────────── */
+    .content { padding: 20px 24px; }
+
+    .section-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #666;
+      margin-bottom: 12px;
+      margin-top: 24px;
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    /* ── Broker grid ─────────────────────────────────────────────────────── */
+    .broker-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+
+    .broker-card {
+      background: #1a1a2e;
+      border-radius: 10px;
+      padding: 16px;
+      border: 1px solid #2e2e4e;
+      position: relative;
+      overflow: hidden;
+    }
+    .broker-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .broker-card.green::before { background: #22c55e; }
+    .broker-card.amber::before { background: #f59e0b; }
+    .broker-card.red::before   { background: #ef4444; }
+    .broker-card.unknown::before { background: #6b7280; }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    .broker-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .broker-id {
+      font-size: 0.7rem;
+      color: #888;
+      margin-top: 2px;
+    }
+    .health-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+    .badge-green  { background: #14532d; color: #4ade80; }
+    .badge-amber  { background: #451a03; color: #fbbf24; }
+    .badge-red    { background: #450a0a; color: #f87171; }
+    .badge-unknown{ background: #1f2937; color: #9ca3af; }
+
+    .sync-time {
+      font-size: 0.72rem;
+      color: #888;
+      margin-bottom: 10px;
+    }
+    .sync-time .age {
+      font-weight: 600;
+    }
+    .sync-time .age.stale { color: #f59e0b; }
+    .sync-time .age.very-stale { color: #ef4444; }
+
+    .pipeline-steps {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .step-chip {
+      font-size: 0.65rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    .step-complete { background: #14532d; color: #86efac; }
+    .step-failed   { background: #450a0a; color: #fca5a5; }
+    .step-started  { background: #1e3a5f; color: #93c5fd; }
+    .step-nodata   { background: #1f2937; color: #6b7280; }
+
+    .error-line {
+      font-size: 0.7rem;
+      color: #f87171;
+      margin-top: 6px;
+      word-break: break-word;
+      background: #1f0a0a;
+      border-left: 2px solid #ef4444;
+      padding: 4px 8px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    /* ── Alerts section ──────────────────────────────────────────────────── */
+    .alerts-list { display: flex; flex-direction: column; gap: 8px; }
+    .alert-row {
+      background: #1a0808;
+      border: 1px solid #3f1111;
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .alert-time {
+      font-size: 0.7rem;
+      color: #888;
+      white-space: nowrap;
+      flex-shrink: 0;
+      padding-top: 1px;
+    }
+    .alert-body { flex: 1; }
+    .alert-broker { font-size: 0.8rem; font-weight: 600; color: #fca5a5; }
+    .alert-condition { font-size: 0.75rem; color: #e5e7eb; margin-top: 2px; }
+    .alert-error { font-size: 0.7rem; color: #888; margin-top: 2px; }
+
+    /* ── Loading / error states ──────────────────────────────────────────── */
+    .state-msg {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+      font-size: 0.9rem;
+    }
+    .state-msg.error-state { color: #f87171; }
+
+    /* ── No-alert message ────────────────────────────────────────────────── */
+    .no-alerts {
+      color: #4ade80;
+      font-size: 0.82rem;
+      padding: 10px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>CaliberPO CommandCentre</h1>
+    <div class="subtitle">Operational health across all broker deployments</div>
+  </div>
+  <div class="header-right">
+    <div class="refresh-info" id="refreshInfo">Loading…</div>
+    <button class="btn-refresh" id="btnRefresh" onclick="loadData()">↻ Refresh</button>
+  </div>
+</div>
+
+<div class="summary-bar" id="summaryBar">
+  <div class="summary-item"><span class="dot dot-grey"></span> Loading…</div>
+</div>
+
+<div class="content">
+  <div class="section-title">Broker Status</div>
+  <div class="broker-grid" id="brokerGrid">
+    <div class="state-msg">Fetching data…</div>
+  </div>
+
+  <div class="section-title">Active Alerts</div>
+  <div class="alerts-list" id="alertsList">
+    <div class="state-msg">Fetching data…</div>
+  </div>
+</div>
+
+<script>
+  var REFRESH_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes — matches signal frequency
+  var refreshTimer = null;
+
+  // ── Data loading ──────────────────────────────────────────────────────────
+
+  function loadData() {
+    var btn = document.getElementById('btnRefresh');
+    btn.disabled = true;
+    document.getElementById('refreshInfo').textContent = 'Refreshing…';
+
+    google.script.run
+      .withSuccessHandler(renderDashboard)
+      .withFailureHandler(onLoadError)
+      .getDashboardData();
+  }
+
+  function onLoadError(err) {
+    document.getElementById('brokerGrid').innerHTML =
+      '<div class="state-msg error-state">Failed to load data: ' + (err.message || err) + '</div>';
+    document.getElementById('refreshInfo').textContent = 'Load failed — retry in 15 min';
+    document.getElementById('btnRefresh').disabled = false;
+    scheduleRefresh();
+  }
+
+  // ── Rendering ─────────────────────────────────────────────────────────────
+
+  function renderDashboard(data) {
+    if (data.error) {
+      onLoadError({ message: data.error });
+      return;
+    }
+
+    var brokers = data.brokers || [];
+    var alerts  = data.alerts  || [];
+
+    renderSummary(brokers);
+    renderBrokers(brokers);
+    renderAlerts(alerts);
+
+    var now = new Date(data.serverTime);
+    var timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.getElementById('refreshInfo').textContent = 'Updated ' + timeStr + ' IST';
+    document.getElementById('btnRefresh').disabled = false;
+
+    scheduleRefresh();
+  }
+
+  function renderSummary(brokers) {
+    var counts = { Green: 0, Amber: 0, Red: 0, unknown: 0 };
+    brokers.forEach(function(b) {
+      var h = b.health_status || 'unknown';
+      if (counts[h] !== undefined) counts[h]++;
+      else counts.unknown++;
+    });
+
+    var bar = document.getElementById('summaryBar');
+    bar.innerHTML = [
+      '<div class="summary-item"><span class="dot dot-grey"></span> ' + brokers.length + ' brokers</div>',
+      '<div class="summary-item"><span class="dot dot-green"></span> ' + counts.Green + ' healthy</div>',
+      counts.Amber > 0 ? '<div class="summary-item"><span class="dot dot-amber"></span> ' + counts.Amber + ' amber</div>' : '',
+      counts.Red   > 0 ? '<div class="summary-item"><span class="dot dot-red"></span> '   + counts.Red   + ' red</div>'   : '',
+    ].join('');
+  }
+
+  function renderBrokers(brokers) {
+    var grid = document.getElementById('brokerGrid');
+    if (brokers.length === 0) {
+      grid.innerHTML = '<div class="state-msg">No broker data yet. Signals arrive every 15 minutes.</div>';
+      return;
+    }
+
+    // Sort: Red first, Amber second, Green last
+    var order = { Red: 0, Amber: 1, Green: 2 };
+    brokers.sort(function(a, b) {
+      return (order[a.health_status] || 3) - (order[b.health_status] || 3);
+    });
+
+    grid.innerHTML = brokers.map(renderBrokerCard).join('');
+  }
+
+  function renderBrokerCard(b) {
+    var health    = (b.health_status || 'unknown').toLowerCase();
+    var badgeClass = 'badge-' + (health === 'green' || health === 'amber' || health === 'red' ? health : 'unknown');
+    var cardClass  = health === 'green' || health === 'amber' || health === 'red' ? health : 'unknown';
+
+    var syncAge = parseInt(b.sync_age_mins) || null;
+    var ageClass = syncAge === null ? '' : syncAge > 120 ? 'very-stale' : syncAge > 30 ? 'stale' : '';
+    var ageText  = syncAge === null ? 'no signal' : syncAge < 2 ? 'just now' : syncAge + ' min ago';
+
+    var steps = [
+      { label: 'Commission', status: b.commission_last_status },
+      { label: 'Payout',     status: b.payout_last_status },
+      { label: 'Statement',  status: b.statement_last_status },
+      { label: 'Recon',      status: b.reconciliation_last_status }
+    ];
+
+    var pipelineHtml = steps.map(function(s) {
+      var cls = s.status === 'COMPLETE' ? 'step-complete'
+              : s.status === 'FAILED'   ? 'step-failed'
+              : s.status === 'STARTED'  ? 'step-started'
+              : 'step-nodata';
+      return '<span class="step-chip ' + cls + '">' + s.label + '</span>';
+    }).join('');
+
+    // Show most relevant error
+    var errMsg = '';
+    if (health === 'red' || health === 'amber') {
+      var err = b.commission_last_error || b.payout_last_error ||
+                b.statement_last_error  || b.reconciliation_last_error || null;
+      if (err) errMsg = '<div class="error-line">' + esc(err) + '</div>';
+    }
+
+    return [
+      '<div class="broker-card ' + cardClass + '">',
+        '<div class="card-header">',
+          '<div>',
+            '<div class="broker-name">' + esc(b.broker_name || b.broker_id) + '</div>',
+            '<div class="broker-id">' + esc(b.broker_id) + '</div>',
+          '</div>',
+          '<span class="health-badge ' + badgeClass + '">' + (b.health_status || '—') + '</span>',
+        '</div>',
+        '<div class="sync-time">Last signal: <span class="age ' + ageClass + '">' + ageText + '</span></div>',
+        '<div class="pipeline-steps">' + pipelineHtml + '</div>',
+        errMsg,
+      '</div>'
+    ].join('');
+  }
+
+  function renderAlerts(alerts) {
+    var list = document.getElementById('alertsList');
+    if (alerts.length === 0) {
+      list.innerHTML = '<div class="no-alerts">✓ No active alerts</div>';
+      return;
+    }
+    list.innerHTML = alerts.map(function(a) {
+      var ts = a.alert_timestamp ? new Date(a.alert_timestamp).toLocaleString('en-IN', {
+        day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+      }) : '—';
+      return [
+        '<div class="alert-row">',
+          '<div class="alert-time">' + ts + '</div>',
+          '<div class="alert-body">',
+            '<div class="alert-broker">' + esc(a.broker_name || a.broker_id) + '</div>',
+            '<div class="alert-condition">' + esc(a.condition || '') + '</div>',
+            a.error_detail ? '<div class="alert-error">' + esc(a.error_detail) + '</div>' : '',
+          '</div>',
+        '</div>'
+      ].join('');
+    }).join('');
+  }
+
+  // ── Utilities ─────────────────────────────────────────────────────────────
+
+  function esc(str) {
+    return (str || '').toString()
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function scheduleRefresh() {
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(function() { loadData(); }, REFRESH_INTERVAL_MS);
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  window.onload = function() { loadData(); };
+</script>
+</body>
+</html>

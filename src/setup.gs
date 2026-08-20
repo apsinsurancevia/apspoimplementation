@@ -440,7 +440,19 @@ function createLogSheet_(folderId) {
     'policy_no','period','processed_at','source_file'
   ], '#375623');
 
-  Logger.log('Log Sheet created with 4 tabs');
+  // Tab 5: Run_Log — system operational log; protected from manual edits
+  setupTab_(ss, 'Run_Log', [
+    'timestamp','function_name','trigger_type','run_status',
+    'error_message','error_function','duration_seconds'
+  ], '#4a1942', '#FFFFFF');
+  var runLogSheet = ss.getSheetByName('Run_Log');
+  if (runLogSheet) {
+    var protection = runLogSheet.protect().setDescription('Run_Log — written by system only');
+    protection.removeEditors(protection.getEditors());
+    if (protection.canDomainEdit()) protection.setDomainEdit(false);
+  }
+
+  Logger.log('Log Sheet created with 5 tabs');
   return ss.getId();
 }
 

@@ -146,7 +146,7 @@ function runReconciliation(insurerId, period) {
 
     Logger.log('=== runReconciliation complete: ' + insurerId + ' ===');
     return matchResults;
-  });
+  }, 'MANUAL');
 }
 
 // ── DATA LOADERS ──────────────────────────────────────────────────────────────

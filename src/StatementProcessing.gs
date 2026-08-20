@@ -107,7 +107,7 @@ function processInsurerStatement(insurerId, fileId) {
       invoicePdfId:  invoicePdfId,
       summaryFileId: summaryFileId
     };
-  });
+  }, 'MANUAL');
 }
 
 // ── CONTENT EXTRACTION ────────────────────────────────────────────────────────

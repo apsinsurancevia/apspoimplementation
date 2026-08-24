@@ -282,10 +282,10 @@
           </select>
         </div>
 
-        <div class="form-group hidden" id="grpSubType">
+        <div class="form-group" id="grpSubType">
           <label>Product Sub Type</label>
-          <select id="productSubType">
-            <option value="">— All Sub Types —</option>
+          <select id="productSubType" disabled>
+            <option value="">Select Product Type first</option>
           </select>
         </div>
 
@@ -353,25 +353,6 @@
           </label>
         </div>
 
-        <hr class="section-divider">
-
-        <div class="section-label">Premium (optional — for amount calculation)</div>
-
-        <div class="form-group" id="grpNetPremium">
-          <label>Net Premium (₹)</label>
-          <input type="number" id="netPremium" placeholder="0.00" step="0.01">
-        </div>
-
-        <div class="form-group" id="grpOdPremium">
-          <label>OD Premium (₹)</label>
-          <input type="number" id="odPremium" placeholder="0.00" step="0.01">
-        </div>
-
-        <div class="form-group" id="grpTpPremium">
-          <label>TP Premium (₹)</label>
-          <input type="number" id="tpPremium" placeholder="0.00" step="0.01">
-        </div>
-
       </div><!-- /form-grid -->
 
       <button class="btn-lookup" id="lookupBtn" onclick="doLookup()">Get Rate</button>
@@ -395,130 +376,163 @@
 <script>
 var FORM_CONFIG = null;
 
-window.onload = function() {
+// ── Boot ──────────────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', function() {
+
+  // Default today's date
   var today = new Date();
   document.getElementById('policyIssueDate').value =
     today.getFullYear() + '-' +
     String(today.getMonth() + 1).padStart(2, '0') + '-' +
     String(today.getDate()).padStart(2, '0');
 
+  // ── Load insurers / fuel types / fieldConfig, then product types ────────────
   google.script.run
-    .withSuccessHandler(initForm)
+    .withSuccessHandler(function(config) {
+      FORM_CONFIG = config;
+
+      var insurerSel = document.getElementById('insurerId');
+      insurerSel.innerHTML = '<option value="">— Select Insurer —</option>';
+      (config.insurers || []).forEach(function(ins) {
+        var opt = document.createElement('option');
+        opt.value = ins.id; opt.textContent = ins.name;
+        insurerSel.appendChild(opt);
+      });
+
+      var fuelSel = document.getElementById('fuelType');
+      fuelSel.innerHTML = '<option value="">— All Fuel Types —</option>';
+      (config.fuelTypes || []).forEach(function(ft) {
+        var opt = document.createElement('option');
+        opt.value = ft; opt.textContent = ft;
+        fuelSel.appendChild(opt);
+      });
+
+      google.script.run
+        .withSuccessHandler(function(types) {
+          var productSel = document.getElementById('productType');
+          productSel.innerHTML = '<option value="">Select Product Type</option>';
+          (types || []).forEach(function(pt) {
+            var opt = document.createElement('option');
+            opt.value = pt; opt.textContent = pt;
+            productSel.appendChild(opt);
+          });
+          document.getElementById('loadingState').classList.add('hidden');
+          document.getElementById('mainForm').classList.remove('hidden');
+        })
+        .withFailureHandler(function(e) {
+          document.getElementById('loadingState').innerHTML =
+            '<span style="color:#c62828">Error loading products: ' + (e.message || e) + '</span>';
+        })
+        .getProductTypes();
+    })
     .withFailureHandler(function(e) {
       document.getElementById('loadingState').innerHTML =
-        '<span style="color:#c62828">Error loading configuration: ' + e.message + '</span>';
+        '<span style="color:#c62828">Error loading configuration: ' + (e.message || e) + '</span>';
     })
     .getFormConfig();
-};
 
-function initForm(config) {
-  FORM_CONFIG = config;
+  // ── Product Type → Sub Types ────────────────────────────────────────────────
+  document.getElementById('productType').addEventListener('change', function() {
+    var selectedType = this.value;
+    var subTypeSel   = document.getElementById('productSubType');
 
-  var insurerSel = document.getElementById('insurerId');
-  insurerSel.innerHTML = '<option value="">— Select Insurer —</option>';
-  config.insurers.forEach(function(ins) {
-    var opt = document.createElement('option');
-    opt.value = ins.id; opt.textContent = ins.name;
-    insurerSel.appendChild(opt);
-  });
+    subTypeSel.innerHTML = '<option value="">Loading...</option>';
+    subTypeSel.disabled  = true;
 
-  var productSel = document.getElementById('productType');
-  productSel.innerHTML = '<option value="">— Select Product Type —</option>';
-  config.productTypes.forEach(function(pt) {
-    var opt = document.createElement('option');
-    opt.value = pt; opt.textContent = pt;
-    productSel.appendChild(opt);
-  });
-
-  var fuelSel = document.getElementById('fuelType');
-  fuelSel.innerHTML = '<option value="">— All Fuel Types —</option>';
-  config.fuelTypes.forEach(function(ft) {
-    var opt = document.createElement('option');
-    opt.value = ft; opt.textContent = ft;
-    fuelSel.appendChild(opt);
-  });
-
-  document.getElementById('loadingState').classList.add('hidden');
-  document.getElementById('mainForm').classList.remove('hidden');
-}
-
-document.getElementById('productType').addEventListener('change', function() {
-  var pt = this.value;
-  if (!FORM_CONFIG || !pt) { hideAllVehicleFields(); return; }
-
-  var fc = FORM_CONFIG.fieldConfig[pt] || {};
-
-  toggleField('grpCc',         fc.cc);
-  toggleField('grpFuel',       fc.fuel);
-  toggleField('grpGvw',        fc.gvw);
-  toggleField('grpSeating',    fc.seating);
-  toggleField('grpYom',        fc.yom);
-  toggleField('grpNilDep',     fc.nilDep);
-  toggleField('grpNcb',        fc.ncb);
-  toggleField('grpVehicleAge', pt === 'Tractor');
-
-  if (fc.subType) {
-    toggleField('grpSubType', true);
-    var subSel = document.getElementById('productSubType');
-    subSel.innerHTML = '<option value="">— All Sub Types —</option>';
-    (FORM_CONFIG.subTypesByProductType[pt] || []).forEach(function(st) {
-      var opt = document.createElement('option');
-      opt.value = st; opt.textContent = st;
-      subSel.appendChild(opt);
-    });
-  } else {
-    toggleField('grpSubType', false);
-    document.getElementById('productSubType').value = '';
-  }
-
-  if (fc.subSubType) {
-    toggleField('grpSubSubType', true);
-    var subSubSel = document.getElementById('productSubSubType');
-    subSubSel.innerHTML = '<option value="">— All —</option>';
-    (FORM_CONFIG.subSubTypesByProductType[pt] || []).forEach(function(sst) {
-      var opt = document.createElement('option');
-      opt.value = sst; opt.textContent = sst;
-      subSubSel.appendChild(opt);
-    });
-  } else {
     toggleField('grpSubSubType', false);
+    document.getElementById('productSubSubType').innerHTML = '<option value="">— All —</option>';
     document.getElementById('productSubSubType').value = '';
-  }
 
-  showAllPremiumFields();
-  ['vehicleCc','vehicleGvw','vehicleSeating','yom'].forEach(function(id) {
-    document.getElementById(id).value = '';
+    hideAllVehicleFields();
+    ['vehicleCc','vehicleGvw','vehicleSeating','yom'].forEach(function(id) {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('fuelType').value = '';
+    document.getElementById('nilDep').checked = false;
+    document.getElementById('ncb').checked    = false;
+    document.getElementById('vehicleAgeDisplay').textContent = '—';
+    document.getElementById('vehicleAgeDisplay').style.color = '#0066cc';
+
+    if (!selectedType) {
+      subTypeSel.innerHTML = '<option value="">Select Product Type first</option>';
+      return;
+    }
+
+    if (FORM_CONFIG && FORM_CONFIG.fieldConfig) {
+      var fc = FORM_CONFIG.fieldConfig[selectedType] || {};
+      toggleField('grpCc',         fc.cc);
+      toggleField('grpFuel',       fc.fuel);
+      toggleField('grpGvw',        fc.gvw);
+      toggleField('grpSeating',    fc.seating);
+      toggleField('grpYom',        fc.yom);
+      toggleField('grpVehicleAge', fc.yom);
+      toggleField('grpNilDep',     fc.nilDep);
+      toggleField('grpNcb',        fc.ncb);
+    }
+
+    google.script.run
+      .withSuccessHandler(function(subTypes) {
+        subTypeSel.innerHTML = '<option value="">Select Sub Type</option>';
+        (subTypes || []).forEach(function(st) {
+          var opt = document.createElement('option');
+          opt.value = st; opt.textContent = st;
+          subTypeSel.appendChild(opt);
+        });
+        subTypeSel.disabled = false;
+      })
+      .withFailureHandler(function(e) {
+        subTypeSel.innerHTML = '<option value="">Error — refresh and retry</option>';
+        subTypeSel.disabled  = false;
+        console.error('getProductSubTypes failed:', e.message || e);
+      })
+      .getProductSubTypes(selectedType);
   });
-  document.getElementById('fuelType').value       = '';
-  document.getElementById('nilDep').checked       = false;
-  document.getElementById('ncb').checked          = false;
-  document.getElementById('vehicleAgeDisplay').textContent = '—';
-  document.getElementById('vehicleAgeDisplay').style.color = '#0066cc';
-  document.getElementById('productSubType').value    = '';
-  document.getElementById('productSubSubType').value = '';
-});
 
-document.getElementById('productSubType').addEventListener('change', function() {
-  var st = this.value;
-  if (st === 'SAOD') {
-    toggleField('grpOdPremium', true); toggleField('grpTpPremium', false); toggleField('grpNetPremium', false);
-  } else if (st === 'SATP') {
-    toggleField('grpOdPremium', false); toggleField('grpTpPremium', true); toggleField('grpNetPremium', false);
-  } else {
-    showAllPremiumFields();
-  }
-});
+  // ── Sub Type → Sub Sub Types (data-driven show/hide) ────────────────────────
+  document.getElementById('productSubType').addEventListener('change', function() {
+    var selectedType    = document.getElementById('productType').value;
+    var selectedSubType = this.value;
+    var subSubSel       = document.getElementById('productSubSubType');
 
-document.getElementById('yom').addEventListener('input', function() {
-  var yom = parseInt(this.value);
-  var display = document.getElementById('vehicleAgeDisplay');
-  var currentYear = new Date().getFullYear();
-  if (!yom || yom < 1990 || yom > currentYear + 1) {
-    display.textContent = '—'; display.style.color = '#0066cc'; return;
-  }
-  display.textContent = yom >= currentYear ? 'New' : 'Old';
-  display.style.color = yom >= currentYear ? '#2e7d32' : '#e65100';
-});
+    toggleField('grpSubSubType', false);
+    subSubSel.innerHTML = '<option value="">— All —</option>';
+    subSubSel.value     = '';
+
+    if (!selectedSubType) return;
+
+    google.script.run
+      .withSuccessHandler(function(subSubTypes) {
+        if (!subSubTypes || subSubTypes.length === 0) return;
+        subSubSel.innerHTML = '<option value="">Select Sub Sub Type</option>';
+        subSubTypes.forEach(function(sst) {
+          var opt = document.createElement('option');
+          opt.value = sst; opt.textContent = sst;
+          subSubSel.appendChild(opt);
+        });
+        toggleField('grpSubSubType', true);
+      })
+      .withFailureHandler(function(e) {
+        console.error('getProductSubSubTypes failed:', e.message || e);
+      })
+      .getProductSubSubTypes(selectedType, selectedSubType);
+  });
+
+  // ── YOM → derived vehicle age ───────────────────────────────────────────────
+  document.getElementById('yom').addEventListener('input', function() {
+    var yom     = parseInt(this.value);
+    var display = document.getElementById('vehicleAgeDisplay');
+    var curYear = new Date().getFullYear();
+    if (!yom || yom < 1990 || yom > curYear + 1) {
+      display.textContent = '—'; display.style.color = '#0066cc'; return;
+    }
+    display.textContent = yom >= curYear ? 'New' : 'Old';
+    display.style.color = yom >= curYear ? '#2e7d32' : '#e65100';
+  });
+
+}); // end DOMContentLoaded
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
 
 function toggleField(groupId, show) {
   var el = document.getElementById(groupId);
@@ -527,13 +541,10 @@ function toggleField(groupId, show) {
 
 function hideAllVehicleFields() {
   ['grpCc','grpFuel','grpGvw','grpSeating','grpYom',
-   'grpNilDep','grpNcb','grpVehicleAge','grpSubType','grpSubSubType']
-    .forEach(function(id) { toggleField(id, false); });
+   'grpNilDep','grpNcb','grpVehicleAge'].forEach(function(id) { toggleField(id, false); });
 }
 
-function showAllPremiumFields() {
-  ['grpNetPremium','grpOdPremium','grpTpPremium'].forEach(function(id) { toggleField(id, true); });
-}
+// ── Rate Lookup ───────────────────────────────────────────────────────────────
 
 function doLookup() {
   var btn = document.getElementById('lookupBtn');
@@ -553,10 +564,7 @@ function doLookup() {
     vehicleSeating:    parseFloat(document.getElementById('vehicleSeating').value) || null,
     yom:               parseInt(document.getElementById('yom').value)              || null,
     nilDep:            document.getElementById('nilDep').checked ? 'Y' : '',
-    ncb:               document.getElementById('ncb').checked    ? 'Y' : '',
-    netPremium:        parseFloat(document.getElementById('netPremium').value) || 0,
-    odPremium:         parseFloat(document.getElementById('odPremium').value)  || 0,
-    tpPremium:         parseFloat(document.getElementById('tpPremium').value)  || 0
+    ncb:               document.getElementById('ncb').checked    ? 'Y' : ''
   };
 
   if (!params.insurerId || !params.productType || !params.policyIssueDate) {
@@ -569,10 +577,12 @@ function doLookup() {
       showResult(result); btn.disabled = false; btn.innerHTML = 'Get Rate';
     })
     .withFailureHandler(function(e) {
-      showError('Server error: ' + e.message); btn.disabled = false; btn.innerHTML = 'Get Rate';
+      showError('Server error: ' + (e.message || e)); btn.disabled = false; btn.innerHTML = 'Get Rate';
     })
     .lookupRate(params);
 }
+
+// ── Result display ─────────────────────────────────────────────────────────────
 
 function showResult(r) {
   var panel  = document.getElementById('resultPanel');
@@ -619,22 +629,16 @@ function showResult(r) {
 
   if (r.vehicleAge) addResultRow(grid, 'Vehicle Age', r.vehicleAge, '');
 
-  addResultRow(grid, 'PI Rate',   r.piRate  ? r.piRate  + '%' : '—', 'pi');
-  addResultRow(grid, 'PI On',     r.piOn    || '—',                   'pi');
-  addResultRow(grid, 'PI Amount', r.piAmount ? '₹' + r.piAmount.toLocaleString('en-IN') : '—', 'pi');
+  addResultRow(grid, 'Match Type', r.matchType === 'EXACT_RTO' ? 'rto_specific' : 'all_rto', '');
 
-  if (r.piRate2) {
-    addResultRow(grid, 'PI Rate 2',   r.piRate2 + '%', 'pi');
-    addResultRow(grid, 'PI On 2',     r.piOn2   || '—', 'pi');
-    addResultRow(grid, 'PI Amount 2', r.piAmount2 ? '₹' + r.piAmount2.toLocaleString('en-IN') : '—', 'pi');
-  }
-
-  addResultRow(grid, 'PO Rate',   r.poRate   ? r.poRate + '%' : '—', '');
-  addResultRow(grid, 'PO Amount', r.poAmount ? '₹' + r.poAmount.toLocaleString('en-IN') : '—', 'amount');
-
-  if (r.poRate2) {
-    addResultRow(grid, 'PO Rate 2',   r.poRate2  ? r.poRate2  + '%' : '—', '');
-    addResultRow(grid, 'PO Amount 2', r.poAmount2 ? '₹' + r.poAmount2.toLocaleString('en-IN') : '—', 'amount');
+  if (r.poRate2 != null) {
+    addResultRow(grid, 'PO Rate (OD)', r.poRate  ? r.poRate  + '%' : '—', 'amount');
+    addResultRow(grid, 'PO Rate On',   r.piOn    || '—',                   '');
+    addResultRow(grid, 'PO Rate (TP)', r.poRate2 ? r.poRate2 + '%' : '—', 'amount');
+    addResultRow(grid, 'PO Rate On',   r.piOn2   || '—',                   '');
+  } else {
+    addResultRow(grid, 'PO Rate',    r.poRate ? r.poRate + '%' : '—', 'amount');
+    addResultRow(grid, 'PO Rate On', r.piOn   || '—',                  '');
   }
 
   if (r.notes) addResultNote(notes, r.notes);
@@ -642,8 +646,8 @@ function showResult(r) {
 
 function addResultRow(grid, labelText, valueText, cls) {
   var item = document.createElement('div'); item.className = 'result-item';
-  var lbl = document.createElement('div'); lbl.className = 'result-label'; lbl.textContent = labelText;
-  var val = document.createElement('div'); val.className = 'result-value' + (cls ? ' ' + cls : ''); val.textContent = valueText;
+  var lbl  = document.createElement('div'); lbl.className  = 'result-label'; lbl.textContent = labelText;
+  var val  = document.createElement('div'); val.className  = 'result-value' + (cls ? ' ' + cls : ''); val.textContent = valueText;
   item.appendChild(lbl); item.appendChild(val); grid.appendChild(item);
 }
 
@@ -652,14 +656,14 @@ function addResultNote(notesEl, text) {
 }
 
 function showError(msg) {
-  var panel = document.getElementById('resultPanel');
+  var panel  = document.getElementById('resultPanel');
   var header = document.getElementById('resultHeader');
-  var badge = document.getElementById('matchBadge');
+  var badge  = document.getElementById('matchBadge');
   panel.classList.remove('hidden');
   header.className = 'result-header error';
-  badge.className = 'badge error'; badge.textContent = 'ERROR';
-  document.getElementById('matchLabel').textContent = msg;
-  document.getElementById('resultGrid').innerHTML = '';
+  badge.className  = 'badge error'; badge.textContent = 'ERROR';
+  document.getElementById('matchLabel').textContent  = msg;
+  document.getElementById('resultGrid').innerHTML    = '';
 }
 </script>
 </body>

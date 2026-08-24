@@ -456,6 +456,27 @@ function processRow(row, sourceHeaders, sourceIndex,
 
     var rateResult = lookupRate(lookupParams);
 
+    // ── Condition-absent PI adjustments ───────────────────────────────────
+    // Each adj column holds a differential applied when that condition is NOT
+    // present on the policy. Both + and - values are treated identically:
+    // applied only when absent. Blank adj = insurer doesn't differentiate.
+    // mapped.has_ncb / has_nil_dep / has_cpa come from source field mapping —
+    // truthy means the condition IS present (no deduction needed).
+    if (rateResult.success) {
+      var piAdj = 0;
+      if (rateResult.ncbAdj    !== null && !mapped.has_ncb)     piAdj += rateResult.ncbAdj;
+      if (rateResult.nilDepAdj !== null && !mapped.has_nil_dep) piAdj += rateResult.nilDepAdj;
+      if (rateResult.cpaAdj    !== null && !mapped.has_cpa)     piAdj += rateResult.cpaAdj;
+      if (piAdj !== 0) {
+        rateResult.piRate  = Math.round(((rateResult.piRate  || 0) + piAdj) * 100) / 100;
+        rateResult.poRate  = Math.round(((rateResult.poRate  || 0) + piAdj) * 100) / 100;
+        if (rateResult.piRate2 !== null) {
+          rateResult.piRate2 = Math.round(((rateResult.piRate2 || 0) + piAdj) * 100) / 100;
+          rateResult.poRate2 = Math.round(((rateResult.poRate2 || 0) + piAdj) * 100) / 100;
+        }
+      }
+    }
+
     // ── Step 8: Write rate results to commission cols ─────────────────────
     setCommission(5,  rateResult.gridTier  || '');  // DN: Grid Tier
     setCommission(6,  rateResult.piRate    || '');  // DO: PI Rate %

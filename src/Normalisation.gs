@@ -352,28 +352,37 @@ function deriveProductVertical(productType) {
  *
  * Tab prefix mapping:
  *   TW               → "TW"
- *   Pvt Car          → "Pvt Car"
- *   GCV              → "GCV"
- *   PCV              → "PCV"
- *   Tractor          → "Misc D"
- *   Construction Eqpt → "Misc D"
+ *   Pvt Car           → "PC"
+ *   GCV               → "GCV"
+ *   PCV               → "PCV"
+ *   Tractor           → "MiscD"
+ *   Construction Eqpt → "MiscD"
+ *
+ * Tab name format: [prefix]_[FY]  e.g. "TW_26-27", "PC_26-27"
+ * FY derived from period: April–March. Month ≥ 4 → FY starts that year.
  *
  * @param {string} productType - CaliberPO canonical product_type
  * @param {string} period - "YYYY-MM" period string
- * @returns {string} Tab name e.g. "TW_2026-08"
+ * @returns {string} Tab name e.g. "TW_26-27"
  */
 function getGridTabName(productType, period) {
   try {
     var prefixMap = {
       'TW':                'TW',
-      'Pvt Car':           'Pvt Car',
+      'Pvt Car':           'PC',
       'GCV':               'GCV',
       'PCV':               'PCV',
-      'Tractor':           'Misc D',
-      'Construction Eqpt': 'Misc D'
+      'Tractor':           'MiscD',
+      'Construction Eqpt': 'MiscD'
     };
     var prefix = prefixMap[productType] || productType;
-    return prefix + '_' + period;
+    var parts   = period.split('-');
+    var year    = parseInt(parts[0]);
+    var month   = parseInt(parts[1]);
+    var fyStart = month >= 4 ? year : year - 1;
+    var fyEnd   = fyStart + 1;
+    var fy      = String(fyStart).slice(2) + '-' + String(fyEnd).slice(2);
+    return prefix + '_' + fy;
   } catch (e) {
     Logger.log('getGridTabName failed for "' + productType + '", "' + period + '": ' + e.message);
     return null;
@@ -511,11 +520,13 @@ function runNormalisationTests() {
     { fn: 'deriveProductVertical', input: 'Tractor',          expected: 'Misc D' },
     { fn: 'deriveProductVertical', input: 'Construction Eqpt',expected: 'Misc D' },
 
-    // getGridTabName
-    { fn: 'getGridTabName', input: ['TW', '2026-08'],               expected: 'TW_2026-08' },
-    { fn: 'getGridTabName', input: ['Pvt Car', '2026-08'],          expected: 'Pvt Car_2026-08' },
-    { fn: 'getGridTabName', input: ['Tractor', '2026-08'],          expected: 'Misc D_2026-08' },
-    { fn: 'getGridTabName', input: ['Construction Eqpt', '2026-08'],expected: 'Misc D_2026-08' },
+    // getGridTabName — FY-based, short prefixes
+    { fn: 'getGridTabName', input: ['TW',               '2026-08'], expected: 'TW_26-27'   },
+    { fn: 'getGridTabName', input: ['TW',               '2026-03'], expected: 'TW_25-26'   },
+    { fn: 'getGridTabName', input: ['Pvt Car',          '2026-08'], expected: 'PC_26-27'   },
+    { fn: 'getGridTabName', input: ['GCV',              '2026-04'], expected: 'GCV_26-27'  },
+    { fn: 'getGridTabName', input: ['Tractor',          '2026-08'], expected: 'MiscD_26-27'},
+    { fn: 'getGridTabName', input: ['Construction Eqpt','2026-08'], expected: 'MiscD_26-27'},
 
     // derivePeriod
     { fn: 'derivePeriod', input: '2026-08-15', expected: '2026-08' },

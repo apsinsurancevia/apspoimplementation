@@ -138,6 +138,36 @@ function getProductSubTypes(productType) {
 }
 
 /**
+ * Returns unique product sub-sub-types for a given product type + sub type.
+ * Returns [] when this combination has no sub-sub-type (e.g. Pvt Car, Construction Eqpt).
+ *
+ * @param {string} productType    - Col B value
+ * @param {string} productSubType - Col C value
+ * @returns {string[]} Unique sub-sub-type strings, or []
+ */
+function getProductSubSubTypes(productType, productSubType) {
+  try {
+    var products = getSheetDataAsObjects(CONFIG.SHEET_PRODUCT_MASTER, 'Motor');
+    var seen = {};
+    var subSubTypes = [];
+    products.forEach(function(row) {
+      if (row.active === 'Y' &&
+          row.product_type === productType &&
+          row.product_sub_type === productSubType) {
+        var val = row.product_sub_sub_type;
+        if (val && val.toString().trim() !== '' && !seen[val]) {
+          seen[val] = true;
+          subSubTypes.push(val.toString().trim());
+        }
+      }
+    });
+    return subSubTypes;
+  } catch (e) {
+    throw new Error('getProductSubSubTypes failed: ' + e.message);
+  }
+}
+
+/**
  * Returns complete form configuration in one server call.
  * Called once on form load — replaces separate getInsurers(),
  * getProductTypes(), getProductSubTypes() calls.
@@ -180,26 +210,24 @@ function getFormConfig() {
       }
 
       if (r.product_sub_sub_type) {
-        if (!subSubTypesByProductType[r.product_type]) {
-          subSubTypesByProductType[r.product_type] = [];
+        var sssVal = r.product_sub_sub_type.toString().trim();
+        if (sssVal) {
+          if (!subSubTypesByProductType[r.product_type]) {
+            subSubTypesByProductType[r.product_type] = [];
+          }
+          var existingSub = subSubTypesByProductType[r.product_type];
+          if (existingSub.indexOf(sssVal) === -1) existingSub.push(sssVal);
         }
-        var existingSub = subSubTypesByProductType[r.product_type];
-        var subSubs = r.product_sub_sub_type.toString().split('/').map(function(s) {
-          return s.trim();
-        });
-        subSubs.forEach(function(ss) {
-          if (ss && existingSub.indexOf(ss) === -1) existingSub.push(ss);
-        });
       }
     });
 
     var fieldConfig = {
-      'TW':               { cc: true,  fuel: true,  subType: true,  subSubType: false, gvw: false, seating: false, yom: false, nilDep: false, ncb: false },
-      'Pvt Car':          { cc: true,  fuel: true,  subType: false, subSubType: false, gvw: false, seating: false, yom: true,  nilDep: true,  ncb: true  },
-      'GCV':              { cc: false, fuel: true,  subType: false, subSubType: false, gvw: true,  seating: false, yom: true,  nilDep: false, ncb: false },
-      'PCV':              { cc: false, fuel: true,  subType: true,  subSubType: true,  gvw: false, seating: true,  yom: true,  nilDep: false, ncb: false },
-      'Tractor':          { cc: false, fuel: false, subType: false, subSubType: false, gvw: false, seating: false, yom: true,  nilDep: false, ncb: false },
-      'Construction Eqpt':{ cc: false, fuel: false, subType: false, subSubType: true,  gvw: false, seating: false, yom: false, nilDep: false, ncb: false }
+      'TW':               { cc: true,  fuel: true,  gvw: false, seating: false, yom: false, nilDep: false, ncb: false },
+      'Pvt Car':          { cc: true,  fuel: true,  gvw: false, seating: false, yom: true,  nilDep: true,  ncb: true  },
+      'GCV':              { cc: false, fuel: true,  gvw: true,  seating: false, yom: true,  nilDep: false, ncb: false },
+      'PCV':              { cc: false, fuel: true,  gvw: false, seating: true,  yom: true,  nilDep: false, ncb: false },
+      'Tractor':          { cc: false, fuel: false, gvw: false, seating: false, yom: true,  nilDep: false, ncb: false },
+      'Construction Eqpt':{ cc: false, fuel: false, gvw: false, seating: false, yom: false, nilDep: false, ncb: false }
     };
 
     return {
@@ -387,6 +415,9 @@ function lookupRate(params) {
 
     // Build final result
     var responseMs = new Date().getTime() - startTime;
+    var rawNcbAdj    = gridRow[colIdx.ncb_adj];
+    var rawNilDepAdj = gridRow[colIdx.nil_dep_adj];
+    var rawCpaAdj    = gridRow[colIdx.cpa_adj];
     result = {
       success:     true,
       matchType:   matchType,
@@ -404,6 +435,9 @@ function lookupRate(params) {
       poAmount:    amounts.poAmount,
       poRate2:     tierResult.poRate2,
       poAmount2:   amounts.poAmount2,
+      ncbAdj:      (rawNcbAdj    !== '' && rawNcbAdj    !== null && rawNcbAdj    !== undefined) ? parseFloat(rawNcbAdj)    : null,
+      nilDepAdj:   (rawNilDepAdj !== '' && rawNilDepAdj !== null && rawNilDepAdj !== undefined) ? parseFloat(rawNilDepAdj) : null,
+      cpaAdj:      (rawCpaAdj    !== '' && rawCpaAdj    !== null && rawCpaAdj    !== undefined) ? parseFloat(rawCpaAdj)    : null,
       responseMs:  responseMs
     };
 
@@ -474,7 +508,7 @@ function buildColumnIndex(headers) {
     gvw_lower_limit:              idx['gvw_lower_limit']              !== undefined ? idx['gvw_lower_limit']              : 20,
     gvw_upper_limit:              idx['gvw_upper_limit']              !== undefined ? idx['gvw_upper_limit']              : 21,
     rto_list:                     idx['rto_list']                     !== undefined ? idx['rto_list']                     : 25,
-    custom_condition_notes:       idx['custom_condition_notes']       !== undefined ? idx['custom_condition_notes']       : 35,
+    cpa_adj:                      idx['cpa_adj']                      !== undefined ? idx['cpa_adj']                      : 35,
     pi_rate:                      idx['pi_rate']                      !== undefined ? idx['pi_rate']                      : 36,
     pi_rate_on:                   idx['pi_rate_on']                   !== undefined ? idx['pi_rate_on']                   : 37,
     pi_rate1:                     idx['pi_rate1']                     !== undefined ? idx['pi_rate1']                     : 38,
@@ -504,8 +538,8 @@ function buildColumnIndex(headers) {
     slab_3_retention:             idx['slab_3_retention']             !== undefined ? idx['slab_3_retention']             : 62,
     slab_3_po_rate:               idx['slab_3__po_rate']              !== undefined ? idx['slab_3__po_rate']              : 63,
     fuel_type:                    idx['fuel_type']                    || 11,
-    is_no_claim_bonus_considered: idx['is_no_claim_bonus_considered'] || 28,
-    is_zero_dip_considered:       idx['is_zero_dip_considered']       || 33
+    ncb_adj:                      idx['ncb_adj']                      !== undefined ? idx['ncb_adj']                      : 28,
+    nil_dep_adj:                  idx['nil_dep_adj']                  !== undefined ? idx['nil_dep_adj']                  : 33
   };
 }
 
@@ -634,30 +668,6 @@ function filterByVehicleParams(rows, colIdx, params) {
             params.fuelType.toString().trim().toLowerCase()) {
           return false;
         }
-      }
-    }
-
-    // ── Nil Dep ────────────────────────────────────────────────────────────
-    // Grid col: is_zero_dip_considered (default index 33)
-    if (params.nilDep !== null && params.nilDep !== undefined && params.nilDep !== '') {
-      var gridNilDep = row[colIdx.is_zero_dip_considered];
-      if (gridNilDep && gridNilDep.toString().trim() !== '') {
-        var gridNilDepVal = gridNilDep.toString().trim().toUpperCase();
-        var paramNilDep   = (params.nilDep === true || params.nilDep === 'Y' ||
-                             params.nilDep === 'true') ? 'Y' : 'N';
-        if (gridNilDepVal !== paramNilDep) return false;
-      }
-    }
-
-    // ── NCB ────────────────────────────────────────────────────────────────
-    // Grid col: is_no_claim_bonus_considered (default index 28)
-    if (params.ncb !== null && params.ncb !== undefined && params.ncb !== '') {
-      var gridNcb = row[colIdx.is_no_claim_bonus_considered];
-      if (gridNcb && gridNcb.toString().trim() !== '') {
-        var gridNcbVal = gridNcb.toString().trim().toUpperCase();
-        var paramNcb   = (params.ncb === true || params.ncb === 'Y' ||
-                          params.ncb === 'true') ? 'Y' : 'N';
-        if (gridNcbVal !== paramNcb) return false;
       }
     }
 

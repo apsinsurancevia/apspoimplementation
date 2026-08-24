@@ -13,22 +13,60 @@
 // ── PRODUCT MASTER SEED DATA ─────────────────────────────────────────────────
 
 var PRODUCT_MASTER_DATA = [
-  ['Motor','TW','New (1+5)','Scooter/Bike','New Business','Y'],
-  ['Motor','TW','New (5+5)','Scooter/Bike','New Business','Y'],
-  ['Motor','TW','1+1','Scooter/Bike','New Business / Renewal','Y'],
-  ['Motor','TW','SAOD','Scooter/Bike','New Business / Renewal','Y'],
-  ['Motor','TW','SATP','Scooter/Bike','New Business / Renewal','Y'],
+  // TW — one row per sub type × sub sub type
+  ['Motor','TW','New (1+5)','Scooter','New Business','Y'],
+  ['Motor','TW','New (1+5)','Bike','New Business','Y'],
+  ['Motor','TW','New (5+5)','Scooter','New Business','Y'],
+  ['Motor','TW','New (5+5)','Bike','New Business','Y'],
+  ['Motor','TW','1+1','Scooter','New Business / Renewal','Y'],
+  ['Motor','TW','1+1','Bike','New Business / Renewal','Y'],
+  ['Motor','TW','SAOD','Scooter','New Business / Renewal','Y'],
+  ['Motor','TW','SAOD','Bike','New Business / Renewal','Y'],
+  ['Motor','TW','SATP','Scooter','New Business / Renewal','Y'],
+  ['Motor','TW','SATP','Bike','New Business / Renewal','Y'],
+  // Pvt Car — no sub sub type
   ['Motor','Pvt Car','New (1+3)','','New Business','Y'],
   ['Motor','Pvt Car','New (3+3)','','New Business','Y'],
   ['Motor','Pvt Car','1+1','','New Business / Renewal','Y'],
   ['Motor','Pvt Car','SAOD','','New Business / Renewal','Y'],
   ['Motor','Pvt Car','SATP','','New Business / Renewal','Y'],
-  ['Motor','GCV','1+1','3W / Tanker / Water Tanker / Car Carrier / Flatbed / Oil Tanker','New Business / Renewal','Y'],
-  ['Motor','GCV','SATP','3W / Tanker / Water Tanker / Car Carrier / Flatbed / Oil Tanker','New Business / Renewal','Y'],
-  ['Motor','PCV','1+1','3W / Taxi 4+1 / Taxi 5+1 / Taxi>7 / Bus<12 / Bus>12<36 / Bus>36 / School Bus / Staff Bus','New Business / Renewal','Y'],
-  ['Motor','PCV','SATP','3W / Taxi 4+1 / Bus<12 / Bus>36 / School Bus / Staff Bus','New Business / Renewal','Y'],
-  ['Misc D','Tractor','1+1','Excavator / Harvester / Agri Tractor','New Business / Renewal','Y'],
-  ['Misc D','Tractor','SATP','Excavator / Harvester / Agri Tractor','New Business / Renewal','Y'],
+  // GCV — one row per sub sub type
+  ['Motor','GCV','1+1','3W','New Business / Renewal','Y'],
+  ['Motor','GCV','1+1','Tanker','New Business / Renewal','Y'],
+  ['Motor','GCV','1+1','Water Tanker','New Business / Renewal','Y'],
+  ['Motor','GCV','1+1','Car Carrier','New Business / Renewal','Y'],
+  ['Motor','GCV','1+1','Flatbed','New Business / Renewal','Y'],
+  ['Motor','GCV','1+1','Oil Tanker','New Business / Renewal','Y'],
+  ['Motor','GCV','SATP','3W','New Business / Renewal','Y'],
+  ['Motor','GCV','SATP','Tanker','New Business / Renewal','Y'],
+  ['Motor','GCV','SATP','Water Tanker','New Business / Renewal','Y'],
+  ['Motor','GCV','SATP','Car Carrier','New Business / Renewal','Y'],
+  ['Motor','GCV','SATP','Flatbed','New Business / Renewal','Y'],
+  ['Motor','GCV','SATP','Oil Tanker','New Business / Renewal','Y'],
+  // PCV — one row per sub sub type
+  ['Motor','PCV','1+1','3W','New Business / Renewal','Y'],
+  ['Motor','PCV','1+1','Taxi 4+1','New Business / Renewal','Y'],
+  ['Motor','PCV','1+1','Taxi 5+1','New Business / Renewal','Y'],
+  ['Motor','PCV','1+1','Taxi>7','New Business / Renewal','Y'],
+  ['Motor','PCV','1+1','Bus<12','New Business / Renewal','Y'],
+  ['Motor','PCV','1+1','Bus>12<36','New Business / Renewal','Y'],
+  ['Motor','PCV','1+1','Bus>36','New Business / Renewal','Y'],
+  ['Motor','PCV','1+1','School Bus','New Business / Renewal','Y'],
+  ['Motor','PCV','1+1','Staff Bus','New Business / Renewal','Y'],
+  ['Motor','PCV','SATP','3W','New Business / Renewal','Y'],
+  ['Motor','PCV','SATP','Taxi 4+1','New Business / Renewal','Y'],
+  ['Motor','PCV','SATP','Bus<12','New Business / Renewal','Y'],
+  ['Motor','PCV','SATP','Bus>36','New Business / Renewal','Y'],
+  ['Motor','PCV','SATP','School Bus','New Business / Renewal','Y'],
+  ['Motor','PCV','SATP','Staff Bus','New Business / Renewal','Y'],
+  // Tractor — one row per sub sub type
+  ['Misc D','Tractor','1+1','Excavator','New Business / Renewal','Y'],
+  ['Misc D','Tractor','1+1','Harvester','New Business / Renewal','Y'],
+  ['Misc D','Tractor','1+1','Agri Tractor','New Business / Renewal','Y'],
+  ['Misc D','Tractor','SATP','Excavator','New Business / Renewal','Y'],
+  ['Misc D','Tractor','SATP','Harvester','New Business / Renewal','Y'],
+  ['Misc D','Tractor','SATP','Agri Tractor','New Business / Renewal','Y'],
+  // Construction Eqpt — no sub sub type
   ['Misc D','Construction Eqpt','1+1','','New Business / Renewal','Y'],
   ['Misc D','Construction Eqpt','SATP','','New Business / Renewal','Y']
 ];
@@ -43,7 +81,7 @@ var INSURER_MASTER_DATA = [
   ['TATA','TATA AIG GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
   ['BAJAJ','BAJAJ ALLIANZ GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
   ['GO','GO DIGIT GENERAL INSURANCE LTD','[GSTIN]','KARNATAKA','KA','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
-  ['INDUSIND','INDUSIND BANK GENERAL INSURANCE CO LTD','[GSTIN]','[STATE]','[CODE]','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
+  ['INDUSIND','INDUSIND GENERAL INSURANCE CO LTD','[GSTIN]','[STATE]','[CODE]','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
   ['NIA','THE NEW INDIA ASSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y']
 ];
 
@@ -222,6 +260,8 @@ function createFolderStructure_() {
     MASTERS:         getOrCreateFolder_(root, 'Masters').getId(),
     CONFIG:          getOrCreateFolder_(root, 'Config').getId(),
     GRIDS:           getOrCreateFolder_(root, 'Grids').getId(),
+    GRID_IMPORT:     getOrCreateFolder_(root, 'Grid Import').getId(),
+    GRID_ARCHIVE:    getOrCreateFolder_(root, 'Grid Archive').getId(),
     INPUT:           getOrCreateFolder_(root, 'Input').getId(),
     OUTPUT:          getOrCreateFolder_(root, 'Output').getId(),
     STATEMENTS:      getOrCreateFolder_(root, 'Statements').getId(),
@@ -486,6 +526,8 @@ function writeConfigIds(jsonString) {
     Logger.log('=== COPY THESE VALUES INTO Config.gs ===');
     Logger.log('FOLDER_ROOT:             "' + (f.ROOT || '') + '",');
     Logger.log('FOLDER_GRIDS:            "' + (f.GRIDS || '') + '",');
+    Logger.log('FOLDER_GRID_IMPORT:      "' + (f.GRID_IMPORT || '') + '",');
+    Logger.log('FOLDER_GRID_ARCHIVE:     "' + (f.GRID_ARCHIVE || '') + '",');
     Logger.log('FOLDER_INPUT:            "' + (f.INPUT || '') + '",');
     Logger.log('FOLDER_OUTPUT:           "' + (f.OUTPUT || '') + '",');
     Logger.log('FOLDER_STATEMENTS:       "' + (f.STATEMENTS || '') + '",');
@@ -649,3 +691,548 @@ function backfillRTOStateCodes() {
 }
 
 // validateGrid() lives in CommissionApplication.gs
+
+// ── GRID TEMPLATE ─────────────────────────────────────────────────────────────
+
+var GRID_HEADERS = [
+  'insurance_company',            // 0
+  'insurer_code',                 // 1
+  'scheme_name',                  // 2
+  'product_type',                 // 3
+  'product_sub_type',             // 4
+  'product_sub_sub_type',         // 5
+  'product_category',             // 6
+  'effective_from_date',          // 7
+  'effective_to_date',            // 8
+  'vehicle_age_band',             // 9
+  'vehicle_age_notes',            // 10
+  'fuel_type',                    // 11
+  'vehicle_type_desc',            // 12
+  'vehicle_segment',              // 13
+  'vehicle_cc_lower_limit',       // 14
+  'vehicle_cc_upper_limit',       // 15
+  'cc_range_notes',               // 16
+  'cc_segment_label',             // 17
+  'seating_capacity_lower_limit', // 18
+  'seating_capacity_upper_limit', // 19
+  'gvw_lower_limit',              // 20
+  'gvw_upper_limit',              // 21
+  'gvw_unit',                     // 22
+  'tonnage_notes',                // 23
+  'region_zone',                  // 24
+  'rto_list',                     // 25
+  'rto_zone',                     // 26
+  'rto_notes',                    // 27
+  'ncb_adj',                       // 28 — differential applied to PI when NCB absent on policy
+  'ncb_rate_notes',               // 29 — free text notes on NCB differential logic
+  'ncb_notes',                    // 30
+  'age_lower_limit',              // 31
+  'age_upper_limit',              // 32
+  'nil_dep_adj',                  // 33 — differential applied to PI when nil dep absent on policy
+  'nil_dep_notes',                // 34
+  'cpa_adj',                      // 35 — differential applied to PI when CPA absent on policy
+  'pi_rate',                      // 36
+  'pi_rate_on',                   // 37
+  'pi_rate1',                     // 38
+  'pi_rate1_on',                  // 39
+  'retention',                    // 40
+  'retention1',                   // 41
+  'po_rate',                      // 42
+  'po_rate_on',                   // 43
+  'po_rate_1',                    // 44
+  'po_rate1_on',                  // 45
+  'slab_1_from',                  // 46
+  'slab_1_to',                    // 47
+  'slab_1__pi_rate',              // 48
+  'slab_1_rate_on',               // 49
+  'slab_1_retention',             // 50
+  'slab_1__po_rate',              // 51
+  'slab_2_from',                  // 52
+  'slab_2_to',                    // 53
+  'slab_2__pi_rate',              // 54
+  'slab_2_rate_on',               // 55
+  'slab_2_retention',             // 56
+  'slab_2__po_rate',              // 57
+  'slab_3_from',                  // 58
+  'slab_3_to',                    // 59
+  'slab_3__pi_rate',              // 60
+  'slab_3_rate_on',               // 61
+  'slab_3_retention',             // 62
+  'slab_3__po_rate'               // 63
+];
+
+/**
+ * Creates a blank commission grid sheet for an insurer in FOLDER_GRIDS.
+ * Run from the Apps Script editor for each insurer you want to set up.
+ *
+ * Usage:  createGridTemplate('OR', 'TW')
+ *         createGridTemplate('NIC', 'Pvt Car')
+ *
+ * Creates: "[insurer_name] Grid" sheet in Grids folder
+ *          Tab named e.g. "TW_2026-08" for the current period
+ *
+ * After running, open the sheet and add rate rows. Then run validateGrid().
+ */
+function createGridTemplate(insurerId, productType) {
+  var id_  = insurerId   || 'OR';
+  var pt_  = productType || 'TW';
+
+  var insurerRow = null;
+  for (var i = 0; i < INSURER_MASTER_DATA.length; i++) {
+    if (INSURER_MASTER_DATA[i][0] === id_) { insurerRow = INSURER_MASTER_DATA[i]; break; }
+  }
+  if (!insurerRow) throw new Error('Insurer not found in INSURER_MASTER_DATA: ' + id_);
+
+  var insurerName = insurerRow[1];
+  var sheetName   = insurerName + ' Grid';
+
+  var now     = new Date();
+  var year    = now.getFullYear();
+  var month   = now.getMonth() + 1;
+  var fyStart = month >= 4 ? year : year - 1;
+  var fyEnd   = fyStart + 1;
+  var fy      = String(fyStart).slice(2) + '-' + String(fyEnd).slice(2);
+
+  var prefixMap = {
+    'TW': 'TW', 'Pvt Car': 'PC', 'GCV': 'GCV',
+    'PCV': 'PCV', 'Tractor': 'MiscD', 'Construction Eqpt': 'MiscD'
+  };
+  var tabName = (prefixMap[pt_] || pt_) + '_' + fy;
+
+  var ss = getOrCreateSheet_(CONFIG.FOLDER_GRIDS, sheetName);
+
+  var sheet = ss.getSheetByName(tabName);
+  if (!sheet) {
+    sheet = ss.insertSheet(tabName);
+    Logger.log('Created tab: ' + tabName);
+  } else {
+    Logger.log('Tab already exists: ' + tabName);
+  }
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(GRID_HEADERS);
+    sheet.getRange(1, 1, 1, GRID_HEADERS.length)
+      .setBackground('#1F3864')
+      .setFontColor('#FFFFFF')
+      .setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    Logger.log('Headers written: ' + GRID_HEADERS.length + ' columns');
+  } else {
+    Logger.log('Headers already present — skipped');
+  }
+
+  Logger.log('Grid template ready: ' + sheetName + ' > ' + tabName);
+  Logger.log('Sheet ID: ' + ss.getId());
+  Logger.log('URL: ' + ss.getUrl());
+  return ss.getId();
+}
+
+/**
+ * Creates grid sheets for ALL insurers × ALL product types in one run.
+ * One Google Sheet per insurer, one tab per product (TW, PC, GCV, PCV, MiscD).
+ * Safe to re-run — skips existing tabs.
+ *
+ * Usage: createAllGridTemplates()
+ */
+function createAllGridTemplates() {
+  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND'];
+  var productTypes = ['TW','Pvt Car','GCV','PCV','Tractor']; // Tractor → MiscD_26-27
+
+  var total = 0, created = 0, skipped = 0;
+
+  insurerIds.forEach(function(id) {
+    productTypes.forEach(function(pt) {
+      total++;
+      try {
+        createGridTemplate(id, pt);
+        created++;
+      } catch (e) {
+        Logger.log('SKIP ' + id + '/' + pt + ': ' + e.message);
+        skipped++;
+      }
+    });
+  });
+
+  Logger.log('');
+  Logger.log('=== createAllGridTemplates complete ===');
+  Logger.log('Total: ' + total + ' | Created/Updated: ' + created + ' | Skipped: ' + skipped);
+}
+
+/**
+ * Rewrites row 1 on all 40 grid tabs with the current GRID_HEADERS.
+ * Run after any header rename. Safe — only touches row 1, never data rows.
+ *
+ * Usage: updateAllGridHeaders()
+ */
+function updateAllGridHeaders() {
+  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND'];
+  var productTypes = ['TW','Pvt Car','GCV','PCV','Tractor'];
+  var prefixMap    = { 'TW':'TW','Pvt Car':'PC','GCV':'GCV','PCV':'PCV','Tractor':'MiscD','Construction Eqpt':'MiscD' };
+
+  var now     = new Date();
+  var year    = now.getFullYear();
+  var month   = now.getMonth() + 1;
+  var fyStart = month >= 4 ? year : year - 1;
+  var fy      = String(fyStart).slice(2) + '-' + String(fyStart + 1).slice(2);
+
+  var updated = 0, skipped = 0, missing = 0;
+
+  insurerIds.forEach(function(id) {
+    var insurerRow = null;
+    for (var i = 0; i < INSURER_MASTER_DATA.length; i++) {
+      if (INSURER_MASTER_DATA[i][0] === id) { insurerRow = INSURER_MASTER_DATA[i]; break; }
+    }
+    if (!insurerRow) { Logger.log('SKIP ' + id + ': not in INSURER_MASTER_DATA'); missing++; return; }
+
+    var sheetName = insurerRow[1] + ' Grid';
+    var folder    = DriveApp.getFolderById(CONFIG.FOLDER_GRIDS);
+    var files     = folder.getFilesByName(sheetName);
+    if (!files.hasNext()) { Logger.log('MISSING sheet: ' + sheetName); missing++; return; }
+
+    var ss = SpreadsheetApp.open(files.next());
+
+    productTypes.forEach(function(pt) {
+      var tabName = (prefixMap[pt] || pt) + '_' + fy;
+      var sheet   = ss.getSheetByName(tabName);
+      if (!sheet) { Logger.log('MISSING tab: ' + id + ' > ' + tabName); missing++; return; }
+
+      sheet.getRange(1, 1, 1, GRID_HEADERS.length).setValues([GRID_HEADERS]);
+      Logger.log('UPDATED ' + id + ' > ' + tabName);
+      updated++;
+    });
+  });
+
+  Logger.log('');
+  Logger.log('=== updateAllGridHeaders: ' + updated + ' updated | ' + skipped + ' skipped | ' + missing + ' missing ===');
+}
+
+/**
+ * Validates all grid tabs for all insurers.
+ * Logs PASS/FAIL per tab. Run after createAllGridTemplates().
+ *
+ * Usage: validateAllGrids()
+ */
+function validateAllGrids() {
+  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND'];
+  var productTypes = ['TW','Pvt Car','GCV','PCV','Tractor'];
+  var prefixMap    = { 'TW':'TW','Pvt Car':'PC','GCV':'GCV','PCV':'PCV','Tractor':'MiscD','Construction Eqpt':'MiscD' };
+
+  var now     = new Date();
+  var year    = now.getFullYear();
+  var month   = now.getMonth() + 1;
+  var fyStart = month >= 4 ? year : year - 1;
+  var fy      = String(fyStart).slice(2) + '-' + String(fyStart + 1).slice(2);
+
+  var passed = 0, failed = 0, missing = 0;
+
+  insurerIds.forEach(function(id) {
+    var insurerRow = null;
+    for (var i = 0; i < INSURER_MASTER_DATA.length; i++) {
+      if (INSURER_MASTER_DATA[i][0] === id) { insurerRow = INSURER_MASTER_DATA[i]; break; }
+    }
+    if (!insurerRow) { Logger.log('SKIP ' + id + ': not in INSURER_MASTER_DATA'); missing++; return; }
+
+    var sheetName = insurerRow[1] + ' Grid';
+    var folder    = DriveApp.getFolderById(CONFIG.FOLDER_GRIDS);
+    var files     = folder.getFilesByName(sheetName);
+    if (!files.hasNext()) { Logger.log('MISSING sheet: ' + sheetName); missing++; return; }
+
+    var ss = SpreadsheetApp.open(files.next());
+
+    productTypes.forEach(function(pt) {
+      var tabName = (prefixMap[pt] || pt) + '_' + fy;
+      var result  = validateGrid(ss.getId(), tabName);
+      if (result.valid) {
+        Logger.log('PASS  ' + id + ' > ' + tabName + ' (' + result.rowsChecked + ' rows)');
+        passed++;
+      } else {
+        Logger.log('FAIL  ' + id + ' > ' + tabName + ': ' + result.errors.length + ' errors');
+        failed++;
+      }
+    });
+  });
+
+  Logger.log('');
+  Logger.log('=== validateAllGrids: ' + passed + ' passed | ' + failed + ' failed | ' + missing + ' missing ===');
+}
+
+// ── GRID ARCHIVE FOLDER MANAGEMENT ───────────────────────────────────────────
+
+/**
+ * Creates one sub-folder per active insurer inside CONFIG.FOLDER_GRID_ARCHIVE.
+ *
+ * Driven entirely by the live Insurer Master sheet — no hardcoded list.
+ * Safe to re-run: existing folders are left untouched, only missing ones created.
+ *
+ * Run once after initial setup, and again whenever a new insurer is added to
+ * the Insurer Master.
+ *
+ * Usage:  setupGridArchiveFolders()
+ */
+function setupGridArchiveFolders() {
+  var archiveFolder = DriveApp.getFolderById(CONFIG.FOLDER_GRID_ARCHIVE);
+  var insurers      = getSheetDataAsObjects(CONFIG.SHEET_INSURER_MASTER, 'Insurers');
+
+  var created = 0, existing = 0, skipped = 0;
+
+  insurers.forEach(function(ins) {
+    if (ins.active !== 'Y') { skipped++; return; }
+
+    var id   = (ins.insurer_id   || '').trim();
+    var name = (ins.insurer_name || '').trim();
+    if (!id) { skipped++; return; }
+
+    // Folder named "TATA — TATA AIG GENERAL INSURANCE CO LTD" for easy identification
+    var folderName = id + (name ? ' — ' + name : '');
+    var existing_  = archiveFolder.getFoldersByName(folderName);
+    if (existing_.hasNext()) {
+      Logger.log('EXISTS  ' + folderName);
+      existing++;
+    } else {
+      archiveFolder.createFolder(folderName);
+      Logger.log('CREATED ' + folderName);
+      created++;
+    }
+  });
+
+  Logger.log('');
+  Logger.log('=== setupGridArchiveFolders: ' + created + ' created | ' + existing + ' existing | ' + skipped + ' skipped ===');
+}
+
+/**
+ * Returns the archive sub-folder for a given insurer code, creating it if absent.
+ * Scans FOLDER_GRID_ARCHIVE for a folder whose name starts with the insurer code.
+ * Falls back to creating a plain folder named by the code if no match found.
+ *
+ * @param {string} insurerCode  e.g. 'TATA', 'RELIANCE'
+ * @returns {Folder}
+ */
+function getOrCreateInsurerArchiveFolder_(insurerCode) {
+  var archiveFolder = DriveApp.getFolderById(CONFIG.FOLDER_GRID_ARCHIVE);
+  var codeLower     = insurerCode.toLowerCase();
+
+  // Scan for a folder whose name starts with the insurer code (matches "TATA — TATA AIG...")
+  var all = archiveFolder.getFolders();
+  while (all.hasNext()) {
+    var f = all.next();
+    if (f.getName().toLowerCase().indexOf(codeLower) === 0) return f;
+  }
+
+  // Not found — create a plain folder named by the code
+  var newFolder = archiveFolder.createFolder(insurerCode);
+  Logger.log('  Archive folder created: ' + insurerCode);
+  return newFolder;
+}
+
+// ── GRID IMPORT FROM EXCEL ────────────────────────────────────────────────────
+
+/**
+ * Imports commission grid data from all .xlsx files in a Drive folder.
+ *
+ * PREREQUISITE: Enable the Advanced Drive Service in Apps Script editor:
+ *   Services (+ icon) → Drive API → Add
+ *
+ * For each .xlsx file:
+ *   1. Converts it to a temporary Google Sheet
+ *   2. Detects insurer from insurer_code column (col B, row 2)
+ *   3. Finds the target grid Sheet in CONFIG.FOLDER_GRIDS (creates if missing)
+ *   4. Imports all product tabs (e.g. TW_26-27) using DATE-PERIOD MERGE:
+ *      - Detects effective_from_date / effective_to_date pairs in incoming data
+ *      - Removes only rows in the target with matching date periods
+ *      - Appends new rows — rows from other periods are untouched
+ *   5. Deletes the temporary Google Sheet
+ *
+ * Usage:  importGridsFromFolder()
+ *   Reads from CONFIG.FOLDER_GRID_IMPORT. Pass a folderId to override.
+ */
+function importGridsFromFolder(folderId) {
+  var srcFolder = DriveApp.getFolderById(folderId || CONFIG.FOLDER_GRID_IMPORT);
+  var files     = srcFolder.getFilesByType(MimeType.MICROSOFT_EXCEL);
+  var summary   = [];
+
+  while (files.hasNext()) {
+    var file  = files.next();
+    var tempId = null;
+    Logger.log('▶ Processing: ' + file.getName());
+
+    try {
+      // Convert .xlsx → temporary Google Sheet
+      tempId = convertExcelToSheet_(file);
+      var srcSS  = SpreadsheetApp.openById(tempId);
+      var srcTabs = srcSS.getSheets();
+
+      // Detect insurer from col A (insurance_company) and col B (insurer_code) of first data row
+      var insurerCode = null, insurerName = null;
+      for (var t = 0; t < srcTabs.length; t++) {
+        if (srcTabs[t].getLastRow() >= 2) {
+          var row2 = srcTabs[t].getRange(2, 1, 1, 2).getValues()[0];
+          insurerName = row2[0]; // col A = insurance_company
+          insurerCode = row2[1]; // col B = insurer_code
+          break;
+        }
+      }
+      if (!insurerCode) throw new Error('No data rows found — cannot detect insurer');
+      Logger.log('  Insurer: ' + insurerCode + ' (' + insurerName + ')');
+
+      // Find or create the target grid sheet
+      var targetId = findOrCreateGridSheet_(insurerCode, insurerName);
+      var targetSS = SpreadsheetApp.openById(targetId);
+
+      var tabsOk = 0, tabsSkipped = 0, totalRows = 0;
+
+      srcTabs.forEach(function(srcTab) {
+        var tabName = srcTab.getName();
+        // Only import product tabs matching our naming pattern e.g. TW_26-27
+        if (!/^[A-Za-z]+_\d{2}-\d{2}$/.test(tabName)) return;
+
+        var lastRow = srcTab.getLastRow();
+        if (lastRow < 2) { tabsSkipped++; return; }
+
+        var destTab = targetSS.getSheetByName(tabName);
+        if (!destTab) {
+          Logger.log('  TAB NOT IN TARGET: ' + tabName + ' — skipping');
+          tabsSkipped++;
+          return;
+        }
+
+        // ── Date-period merge ─────────────────────────────────────────────
+        // effective_from_date = col H (index 7), effective_to_date = col I (index 8)
+        // Only rows whose date-period key exists in the incoming data are replaced.
+        // Rows from other periods (e.g. Aug rates when importing Sep) are kept.
+
+        var srcData = srcTab.getRange(2, 1, lastRow - 1, 64).getValues();
+
+        // Collect all date-period keys present in the incoming data
+        var srcPeriods = {};
+        srcData.forEach(function(row) {
+          var key = normalizeDate_(row[7]) + '|' + normalizeDate_(row[8]);
+          srcPeriods[key] = true;
+        });
+
+        // Read existing target rows and keep those NOT in the incoming date periods
+        var destLast   = destTab.getLastRow();
+        var keepRows   = [];
+        var removedCount = 0;
+        if (destLast > 1) {
+          var existing = destTab.getRange(2, 1, destLast - 1, 64).getValues();
+          existing.forEach(function(row) {
+            var key = normalizeDate_(row[7]) + '|' + normalizeDate_(row[8]);
+            if (srcPeriods[key]) { removedCount++; } else { keepRows.push(row); }
+          });
+        }
+
+        // Rewrite: kept rows + new source rows
+        if (destLast > 1) destTab.getRange(2, 1, destLast - 1, 64).clearContent();
+        var allRows = keepRows.concat(srcData);
+        if (allRows.length > 0) destTab.getRange(2, 1, allRows.length, 64).setValues(allRows);
+
+        Logger.log('  ✓ ' + tabName + ': removed ' + removedCount + ' old-period rows, added ' +
+                   srcData.length + ' new rows, kept ' + keepRows.length + ' other-period rows');
+        tabsOk++;
+        totalRows += data.length;
+      });
+
+      // ── Auto-archive ─────────────────────────────────────────────────────
+      // Move processed file from Grid Import to Grid Archive / [Insurer] /
+      try {
+        var archiveFolder = getOrCreateInsurerArchiveFolder_(insurerCode);
+        file.moveTo(archiveFolder);
+        Logger.log('  Archived to: ' + archiveFolder.getName());
+      } catch (archErr) {
+        Logger.log('  WARNING: archive move failed — ' + archErr.message);
+      }
+
+      summary.push({ file: file.getName(), insurer: insurerCode, status: 'OK',
+                     tabs: tabsOk, skipped: tabsSkipped, rows: totalRows });
+
+    } catch (e) {
+      Logger.log('  ERROR: ' + e.message);
+      summary.push({ file: file.getName(), status: 'ERROR', reason: e.message });
+
+    } finally {
+      // Always delete the temporary converted Google Sheet
+      if (tempId) {
+        try { DriveApp.getFileById(tempId).setTrashed(true); } catch (e2) {}
+      }
+    }
+  }
+
+  Logger.log('');
+  Logger.log('=== importGridsFromFolder complete ===');
+  summary.forEach(function(r) { Logger.log(JSON.stringify(r)); });
+  return summary;
+}
+
+/**
+ * Converts an Excel (.xlsx) file to a Google Sheets file.
+ * Returns the new spreadsheet ID. Caller must trash after use.
+ *
+ * Requires: Advanced Drive Service (Services → Drive API → Add).
+ */
+function convertExcelToSheet_(file) {
+  var resource = {
+    title:    'TEMP_IMPORT__' + file.getName(),
+    mimeType: MimeType.GOOGLE_SHEETS
+  };
+  var result = Drive.Files.insert(resource, file.getBlob());
+  return result.id;
+}
+
+/**
+ * Finds the grid Sheet for insurerCode in CONFIG.FOLDER_GRIDS.
+ * If not found, creates a new Sheet with all 5 product tabs.
+ *
+ * Search order:
+ *   1. Exact filename: insurerCode + ' Grid'
+ *   2. Scan folder for any file whose name contains insurerCode (case-insensitive)
+ *   3. Create: insurerCode + ' Grid' with TW/PC/GCV/PCV/MiscD tabs
+ */
+function findOrCreateGridSheet_(insurerCode, insurerName) {
+  var gridsFolder = DriveApp.getFolderById(CONFIG.FOLDER_GRIDS);
+
+  // 1. Exact match on code
+  var f = gridsFolder.getFilesByName(insurerCode + ' Grid');
+  if (f.hasNext()) return f.next().getId();
+
+  // 2. Scan for partial match — handles e.g. 'TATA AIG GENERAL INSURANCE CO LTD Grid'
+  var all = gridsFolder.getFiles();
+  var codeLower = insurerCode.toLowerCase();
+  while (all.hasNext()) {
+    var candidate = all.next();
+    if (candidate.getName().toLowerCase().indexOf(codeLower) !== -1) {
+      Logger.log('  Grid found by scan: ' + candidate.getName());
+      return candidate.getId();
+    }
+  }
+
+  // 3. Create new grid sheet for this insurer
+  Logger.log('  No grid found for ' + insurerCode + ' — creating new sheet');
+  var now     = new Date();
+  var fyStart = (now.getMonth() + 1) >= 4 ? now.getFullYear() : now.getFullYear() - 1;
+  var fy      = String(fyStart).slice(2) + '-' + String(fyStart + 1).slice(2);
+
+  var ss = SpreadsheetApp.create(insurerCode + ' Grid');
+  DriveApp.getFileById(ss.getId()).moveTo(gridsFolder);
+
+  var prefixes = ['TW', 'PC', 'GCV', 'PCV', 'MiscD'];
+  prefixes.forEach(function(prefix, i) {
+    var tab = (i === 0) ? ss.getSheets()[0] : ss.insertSheet();
+    tab.setName(prefix + '_' + fy);
+    tab.getRange(1, 1, 1, GRID_HEADERS.length).setValues([GRID_HEADERS]);
+    tab.getRange(1, 1, 1, GRID_HEADERS.length).setFontWeight('bold');
+    tab.setFrozenRows(1);
+  });
+
+  Logger.log('  Created grid sheet: ' + insurerCode + ' Grid (ID: ' + ss.getId() + ')');
+  return ss.getId();
+}
+
+/**
+ * Normalises a date value to a YYYY-MM-DD string for period-key comparison.
+ * Handles Date objects (from Sheets) and string values.
+ */
+function normalizeDate_(val) {
+  if (!val && val !== 0) return '';
+  if (val instanceof Date) return Utilities.formatDate(val, 'UTC', 'yyyy-MM-dd');
+  return String(val).trim();
+}

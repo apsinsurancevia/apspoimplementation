@@ -62,6 +62,8 @@ const CONFIG = {
   FOLDER_MASTERS:           "1DZHBZFTBMxHVmeW0-RWYomUJ_uM8v1nh",
   FOLDER_BACKUP:            "1oEX-shlNq9TSe0XIfPRj_pKPpfOs26hI",
   FOLDER_LOG:               "1TxWyL8SVAxZ1oQUAeiz_yreKIuWwm5q0",
+  FOLDER_GRID_IMPORT:       "1VqB8OyvbxcjuIE3o-uUY1i-NPlm4Obsz",  // Inbox — drop .xlsx files here, run importGridsFromFolder()
+  FOLDER_GRID_ARCHIVE:      "1hM7zzwCW-LBilUs7Q-60qx1Z8NTm39Uh",  // Permanent archive — one sub-folder per insurer, auto-populated
 
   // ── SHEET IDs ─────────────────────────────────────────────────────────────
   // Populated automatically by setup.gs — do not edit manually

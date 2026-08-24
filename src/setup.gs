@@ -1129,7 +1129,7 @@ function importGridsFromFolder(folderId) {
         Logger.log('  ✓ ' + tabName + ': removed ' + removedCount + ' old-period rows, added ' +
                    srcData.length + ' new rows, kept ' + keepRows.length + ' other-period rows');
         tabsOk++;
-        totalRows += data.length;
+        totalRows += srcData.length;
       });
 
       // ── Auto-archive ─────────────────────────────────────────────────────
@@ -1174,7 +1174,7 @@ function convertExcelToSheet_(file) {
     title:    'TEMP_IMPORT__' + file.getName(),
     mimeType: MimeType.GOOGLE_SHEETS
   };
-  var result = Drive.Files.insert(resource, file.getBlob());
+  var result = Drive.Files.create(resource, file.getBlob(), {fields: 'id'});
   return result.id;
 }
 
@@ -1233,6 +1233,6 @@ function findOrCreateGridSheet_(insurerCode, insurerName) {
  */
 function normalizeDate_(val) {
   if (!val && val !== 0) return '';
-  if (val instanceof Date) return Utilities.formatDate(val, 'UTC', 'yyyy-MM-dd');
+  if (val instanceof Date) return Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd');
   return String(val).trim();
 }

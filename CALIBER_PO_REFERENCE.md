@@ -1,5 +1,5 @@
 # CaliberPO — System Reference
-_Last updated: 2026-08-21_
+_Last updated: 2026-08-24_
 
 ---
 
@@ -72,7 +72,12 @@ caliber-po/
 
 ```
 CaliberPO/                      # FOLDER_ROOT
-├── Grids/                      # FOLDER_GRIDS — insurer commission grids
+├── Grids/                      # FOLDER_GRIDS — insurer commission grid Sheets (one per insurer)
+├── Grid Import/                # FOLDER_GRID_IMPORT — drop zone for .xlsx imports (inbox)
+├── Grid Archive/               # FOLDER_GRID_ARCHIVE — permanent original Excel store
+│   ├── TATA — TATA AIG.../    #   one sub-folder per insurer (auto-created by setupGridArchiveFolders)
+│   ├── RELIANCE/               #   new insurers auto-create on first import
+│   └── ...
 ├── Input/                      # FOLDER_INPUT — uploaded statements, RTO CSV
 ├── Output/                     # FOLDER_OUTPUT — commission batch outputs
 ├── Statements/                 # FOLDER_STATEMENTS — insurer statement files
@@ -88,7 +93,7 @@ CaliberPO/                      # FOLDER_ROOT
 **Master sheets (all created by runSetup()):**
 - `Product Master` — Motor + Misc D tabs, one row per sub-sub-type (50 rows)
 - `RTO Master` — RTO tab, imported via `importRTOMasterFromDrive(fileId)`
-- `Insurer Master` — Insurers tab (8 insurers) + Insurer_Code_Map tab
+- `Insurer Master` — Insurers tab + Insurer_Code_Map tab. Drives setupGridArchiveFolders() — add insurer here first.
 - `Broker Config Sheet` — Config, Field_Mapping, Grid_Config, Invoice_Config, Normalization, Prompts tabs
 - `Partner Master` — Partners tab
 - `Reconciliation` — Index tab (insurer tabs added at runtime)
@@ -126,9 +131,9 @@ CaliberPO/                      # FOLDER_ROOT
 | T (19) | seating_capacity_lower/upper | For PCV |
 | U–V (20–21) | gvw_lower/upper_limit | For GCV, in tonnes |
 | Z (25) | rto_list | RTO codes comma-separated or "All" |
-| AC (28) | is_no_claim_bonus_considered | Y / blank |
-| AH (33) | is_zero_dip_considered | Y / blank |
-| AJ (35) | custom_condition_notes | Free text |
+| AC (28) | ncb_adj | Numeric differential applied to PI when NCB absent on policy |
+| AH (33) | nil_dep_adj | Numeric differential applied to PI when Nil Dep absent on policy |
+| AJ (35) | cpa_adj | Numeric differential applied to PI when CPA absent on policy |
 | AK (36) | pi_rate | PI commission % |
 | AL (37) | pi_rate_on | OD / TP / NET / FLAT / TP1Y |
 | AM (38) | pi_rate1 | Second PI rate (dual rate) |
@@ -137,6 +142,12 @@ CaliberPO/                      # FOLDER_ROOT
 | AR (43) | po_rate_on | Rate base for PO |
 | AS (44) | po_rate_1 | Second PO rate (dual rate — TP) |
 | AT–BL | slab_1/2/3_* | Premium slab tiers |
+
+**Condition-absent differential model (ncb_adj / nil_dep_adj / cpa_adj):**
+- Blank = insurer doesn't differentiate for that condition
+- Any number (+ or −) = differential applied to PI **only when the condition is ABSENT** on the policy
+- Base PI rate assumes conditions present; CommissionApplication.gs applies piAdj + poAdj at batch time
+- NCB/NilDep are no longer filter dimensions — they are adjustment-only columns
 
 **Grid lookup flow in lookupRate():**
 1. Find sheet: `findInsurerGridSheet(insurerId)` → searches FOLDER_GRIDS by `[insurer_name] Grid`
@@ -152,7 +163,11 @@ CaliberPO/                      # FOLDER_ROOT
 
 ---
 
-## Insurers (APS)
+## Insurers
+
+GI has ~22 insurers. The system is **not hardcoded to any fixed list** — it is driven entirely by the live Insurer Master sheet. Seed data covers 8 initial insurers; add rows to the sheet for more. Run `setupGridArchiveFolders()` after adding new insurers.
+
+**Initial seed (8 insurers):**
 
 | ID | Name (in Insurer Master + Grid sheet name) |
 |----|---------------------------------------------|
@@ -164,6 +179,46 @@ CaliberPO/                      # FOLDER_ROOT
 | BAJAJ | BAJAJ ALLIANZ GENERAL INSURANCE CO LTD |
 | GO | GO DIGIT GENERAL INSURANCE LTD |
 | INDUSIND | INDUSIND GENERAL INSURANCE CO LTD |
+
+**Additional insurers added (Novoup):** RELIANCE (Reliance General Insurance), ROYALSU (Royal Sundaram General Insurance) — grid sheets auto-created on first import.
+
+---
+
+## Grid Import Pipeline
+
+**Purpose:** Load commission rate data from insurer Excel files into the Google Sheets grid, with full audit trail and date-period safety.
+
+**Prerequisite (one-time):** Enable Advanced Drive Service in Apps Script editor → Services (+) → Drive API → Add.
+
+**Repeatable workflow:**
+1. Drop `.xlsx` file(s) into `Grid Import` folder in Drive
+2. Run `importGridsFromFolder()` — no arguments needed
+3. Done — Grid Import folder clears automatically
+
+**What the function does per file:**
+- Converts `.xlsx` → temporary Google Sheet (Drive API)
+- Detects insurer from `insurer_code` column (col B, row 2)
+- Finds insurer's grid Sheet in FOLDER_GRIDS (creates it with 5 product tabs if new insurer)
+- For each product tab (e.g. `TW_26-27`): **date-period merge** — removes only rows whose `effective_from_date|effective_to_date` key matches incoming data; rows from other periods untouched
+- Moves processed file to `Grid Archive/[Insurer]/` (permanent store)
+- Deletes temporary converted Sheet
+
+**Date-period merge example:**
+- Grid has August rows (effective 2026-08-01 → 2026-08-31)
+- September Excel uploaded → only Sep rows replaced; Aug rows untouched
+
+**Adding a new insurer:**
+1. Add row to Insurer Master sheet (active = Y)
+2. Run `setupGridArchiveFolders()` → creates archive subfolder
+3. Drop insurer's `.xlsx` into Grid Import → run `importGridsFromFolder()`
+
+**New financial year:**
+- Run `createAllGridTemplates()` first (stamps new FY tabs e.g. `TW_27-28` on all grid sheets)
+- Then drop new FY Excel files and run import as normal
+
+**Recovery from corruption:**
+- Go to `Grid Archive/[Insurer]/`, grab the relevant month file
+- Move to Grid Import → run `importGridsFromFolder()`
 
 ---
 
@@ -200,6 +255,10 @@ CaliberPO/                      # FOLDER_ROOT
 - [x] MonitoringSync — setupMonitoringTrigger() wired, MONITORING_ENDPOINT + MONITORING_KEY set
 - [x] Rate lookup form result — PO Rate only (PI Rate removed from UI), dual rate display
 - [x] Grid tab naming — FY-based (TW_26-27), short prefixes (PC, MiscD)
+- [x] ncb_adj / nil_dep_adj / cpa_adj — condition-absent differential model (2026-08-21)
+- [x] Grid Import Pipeline — importGridsFromFolder() with date-period merge + auto-archive (2026-08-24)
+- [x] Grid Archive folder structure — Grid Import + Grid Archive folders created; setupGridArchiveFolders() driven by live Insurer Master (2026-08-24)
+- [x] Broker deployment replication — runSetup() now creates Grid Import + Grid Archive automatically; writeConfigIds() logs all IDs
 
 ---
 
@@ -246,8 +305,11 @@ CaliberPO/                      # FOLDER_ROOT
 |---|---|---|
 | `runSetup()` | setup.gs | Creates all folders + sheets. Safe to re-run. |
 | `writeConfigIds(json)` | setup.gs | Pastes folder/sheet IDs into log after runSetup() |
-| `createAllGridTemplates()` | setup.gs | Creates 8×5 grid sheets in FOLDER_GRIDS |
-| `validateAllGrids()` | setup.gs | Validates all 40 grid tabs |
+| `createAllGridTemplates()` | setup.gs | Creates insurer grid sheets in FOLDER_GRIDS |
+| `updateAllGridHeaders()` | setup.gs | Rewrites row 1 on all grid tabs with current GRID_HEADERS |
+| `validateAllGrids()` | setup.gs | Validates all grid tabs |
+| `importGridsFromFolder()` | setup.gs | Imports .xlsx from FOLDER_GRID_IMPORT; date-period merge; auto-archives |
+| `setupGridArchiveFolders()` | setup.gs | Creates one archive subfolder per active insurer (reads live Insurer Master) |
 | `createGridTemplate(id, pt)` | setup.gs | Single insurer × product grid |
 | `importRTOMasterFromDrive(fileId)` | setup.gs | Imports RTO CSV from Drive |
 | `lookupRate(params)` | RateLookup.gs | Core rate engine |

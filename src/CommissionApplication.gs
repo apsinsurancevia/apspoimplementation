@@ -124,6 +124,14 @@ function runCommissionBatch() {
     // Step 3: Load broker config into memory
     Logger.log('Loading broker config...');
     var fieldMap    = getSheetDataAsObjects(CONFIG.SHEET_BROKER_CONFIG, 'Field_Mapping');
+
+    // Pre-check: Field_Mapping must have been confirmed by runMappingWizard() + confirmMapping()
+    if (!fieldMap || fieldMap.length < 5) {
+      throw new Error(
+        'Field_Mapping has fewer than 5 rows. ' +
+        'Run runMappingWizard() and confirmMapping() before processing sales data.'
+      );
+    }
     var insurerMap  = getSheetData(CONFIG.SHEET_BROKER_CONFIG, 'Insurer_Code_Map');
     var productMap  = getSheetData(CONFIG.SHEET_BROKER_CONFIG, 'Product_Map');
     var derivRules  = getSheetDataAsObjects(CONFIG.SHEET_BROKER_CONFIG, 'Derivation_Rules');
@@ -584,6 +592,13 @@ function mapSourceFields(row, sourceIndex, fieldMap, insurerMap, productMap) {
         if (standardField === 'product_type' && !val) {
           mapped['_raw_product_type'] = rawProduct;
         }
+        break;
+
+      case 'ncb_normalise':
+        // NCB comes as 0/20/25/35/45/50 or "20%". 0 and blank both mean no NCB.
+        var ncbStr = rawVal ? rawVal.toString().replace('%', '').trim() : '';
+        var ncbNum = parseFloat(ncbStr);
+        val = (isNaN(ncbNum) || ncbNum === 0) ? 0 : ncbNum;
         break;
 
       default:

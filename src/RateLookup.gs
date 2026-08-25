@@ -32,24 +32,103 @@ function doGet(e) {
 }
 
 /**
- * Handles API requests from external system integrations.
+ * CaliberPO Rate API
+ * Single-call endpoint. Send all fields, get rate back.
  *
- * All requests: GET ?api=true&apiKey=KEY&action=ACTION&...params
+ * ── REQUEST ──────────────────────────────────────────────────────────────────
+ * Method : GET
+ * URL    : <deployed web app URL>
+ * Params : api=true  (required — routes to this handler)
  *
- * Actions:
- *   config      — returns insurers, product types, sub-types, field requirements, fuel types.
- *                 Call once on startup to know what fields each product type needs.
- *   subTypes    — returns sub-types for a given productType.
- *                 Params: productType
- *   subSubTypes — returns sub-sub-types for a given productType + productSubType.
- *                 Returns [] when none exist for that combination.
- *                 Params: productType, productSubType
- *   rate        — validates and looks up the commission rate.
- *                 Returns rate result including adjustment factors.
- *                 Params: insurerId, productType, productSubType, productSubSubType (if needed),
- *                         policyIssueDate, rto, netPremium, odPremium, tpPremium,
- *                         and conditional: vehicleCc, vehicleGvw, vehicleSeating, yom,
- *                         fuelType, ncb (numeric: 0/20/25/35/45/50), nilDep (Y or blank), cpa (Y or blank)
+ * ── AUTHENTICATION ───────────────────────────────────────────────────────────
+ * apiKey : string  Your API key (set RATE_API_KEY in Apps Script Script Properties)
+ *
+ * ── ALWAYS REQUIRED ──────────────────────────────────────────────────────────
+ * insurerId       : string  Insurer code from CaliberPO master.
+ *                           Examples: TATA_AIG, HDFC_ERGO, BAJAJ, NEW_INDIA,
+ *                                     ICICI_LOMBARD, RELIANCE, ROYAL_SUNDARAM,
+ *                                     CHOLA, SBI_GENERAL
+ *
+ * productType     : string  One of:
+ *                           TW | Pvt Car | GCV | PCV | Tractor | Construction Eqpt
+ *
+ * productSubType  : string  Coverage type. Common values:
+ *                           Comprehensive | TP Only
+ *                           (exact values vary by insurer grid)
+ *
+ * policyIssueDate : string  YYYY-MM-DD  e.g. 2026-08-01
+ *
+ * netPremium      : number  Total premium (OD + TP). Used when odPremium/tpPremium
+ *                           are not split. Send at least one of netPremium,
+ *                           odPremium, or tpPremium.
+ *
+ * ── RECOMMENDED (split premium — more accurate rate calculation) ──────────────
+ * odPremium       : number  OD component including all OD add-ons
+ * tpPremium       : number  TP component including all TP add-ons
+ *
+ * ── CONDITIONAL BY PRODUCT TYPE ──────────────────────────────────────────────
+ * vehicleCc       : number  Engine CC          — required for: TW, Pvt Car
+ *                           Examples: 100, 125, 150, 350, 1197, 1500
+ *
+ * vehicleGvw      : number  Gross Vehicle Wt   — required for: GCV, Tractor
+ *                           In tonnes. Examples: 3.5, 7.5, 12, 25
+ *
+ * vehicleSeating  : number  Seating capacity   — required for: PCV
+ *                           Examples: 7, 13, 32, 54
+ *
+ * yom             : number  Year of manufacture — required for: Pvt Car, GCV, PCV, Tractor
+ *                           Examples: 2019, 2022, 2026
+ *
+ * fuelType        : string  Fuel type           — required for: TW, Pvt Car, GCV, PCV
+ *                           One of: Petrol | Diesel | Electric | Bio Fuel
+ *
+ * ── OPTIONAL ─────────────────────────────────────────────────────────────────
+ * rto             : string  RTO/registration code. Normalised to XX-00 format internally.
+ *                           Examples: MH-12, DL-01, KA-05
+ *                           If blank or no exact match → PAN India rate applies.
+ *
+ * productSubSubType : string  Required only for product types that have a third level
+ *                             (e.g. PCV sub-sub-types: School Bus, Staff Bus).
+ *                             Leave blank if not applicable.
+ *
+ * ncb             : number  No Claim Bonus value on the policy.
+ *                           Values: 0 | 20 | 25 | 35 | 45 | 50
+ *                           0 = no NCB (NCB-absent adjustment fires if grid has one).
+ *                           Omit or send 0 for new/no-NCB policies.
+ *
+ * nilDep          : string  Nil Depreciation add-on present on this policy.
+ *                           Send: Y (present) or blank (absent).
+ *                           Absent → NilDep-absent adjustment fires if grid has one.
+ *
+ * cpa             : string  Compulsory PA cover present on this policy.
+ *                           Send: Y (present) or blank (absent).
+ *                           Absent → CPA-absent adjustment fires if grid has one.
+ *
+ * ── RESPONSE ─────────────────────────────────────────────────────────────────
+ * success          : boolean
+ * matchStatus      : MATCHED | NO_MATCH | DUPLICATE_RATE | ERROR
+ * matchType        : EXACT_RTO | PAN_INDIA
+ * gridTier         : Base | Slab_1 | Slab_2 | Slab_3
+ * vehicleAge       : New | Old  (derived from yom)
+ * piRate           : number  PI rate % (insurer → broker)
+ * piOn             : string  Rate basis: OD | TP | NET | FLAT
+ * piAmount         : number  PI amount before adjustments
+ * piRate2          : number  Second PI rate % (when grid has OD + TP split rates)
+ * piOn2            : string  Second rate basis
+ * piAmount2        : number  Second PI amount
+ * poRate           : number  PO rate % (broker → partner)
+ * poAmount         : number  PO amount before adjustments
+ * poRate2          : number  Second PO rate %
+ * poAmount2        : number  Second PO amount
+ * ncbAdj           : number  NCB adjustment % from grid (null if grid has none)
+ * nilDepAdj        : number  NilDep adjustment % from grid (null if grid has none)
+ * cpaAdj           : number  CPA adjustment % from grid (null if grid has none)
+ * adjustmentsApplied: array  List of adjustments that fired, e.g. ["ncb_adj: -5%"]
+ * finalPoAmount    : number  Net PO amount after all adjustments — USE THIS for payout
+ * finalPiAmount    : number  Net PI amount after all adjustments
+ * notes            : string  Explanation on NO_MATCH or ERROR
+ * missingFields    : array   Populated on validation failure
+ * error            : string  Error message on failure
  */
 function handleAPIRequest(e) {
   try {
@@ -63,50 +142,9 @@ function handleAPIRequest(e) {
       }
     }
 
-    var action = (e.parameter && e.parameter.action) ? e.parameter.action : 'rate';
-
-    // ── action=config ──────────────────────────────────────────────────────────
-    if (action === 'config') {
-      var config = getFormConfig();
-      return apiResponse_({
-        success:                  true,
-        insurers:                 config.insurers,
-        productTypes:             config.productTypes,
-        subTypesByProductType:    config.subTypesByProductType,
-        subSubTypesByProductType: config.subSubTypesByProductType,
-        fieldConfig:              config.fieldConfig,
-        fuelTypes:                config.fuelTypes,
-        notes: 'fieldConfig.{productType} tells you which optional fields apply for that product type.'
-      });
-    }
-
-    // ── action=subTypes ────────────────────────────────────────────────────────
-    if (action === 'subTypes') {
-      var productType = e.parameter.productType || '';
-      if (!productType) return apiResponse_({ success: false, error: 'productType is required' });
-      var subTypes = getProductSubTypes(productType);
-      return apiResponse_({ success: true, productType: productType, subTypes: subTypes });
-    }
-
-    // ── action=subSubTypes ─────────────────────────────────────────────────────
-    if (action === 'subSubTypes') {
-      var productType    = e.parameter.productType    || '';
-      var productSubType = e.parameter.productSubType || '';
-      if (!productType)    return apiResponse_({ success: false, error: 'productType is required' });
-      if (!productSubType) return apiResponse_({ success: false, error: 'productSubType is required' });
-      var subSubTypes = getProductSubSubTypes(productType, productSubType);
-      return apiResponse_({
-        success:        true,
-        productType:    productType,
-        productSubType: productSubType,
-        subSubTypes:    subSubTypes
-      });
-    }
-
-    // ── action=rate (default) ──────────────────────────────────────────────────
     var p = e.parameter || {};
 
-    // Build params object from query string
+    // ── Parse all inputs ────────────────────────────────────────────────────────
     var params = {
       insurerId:         p.insurerId         || '',
       productType:       p.productType       || '',
@@ -114,49 +152,41 @@ function handleAPIRequest(e) {
       productSubSubType: p.productSubSubType || '',
       rto:               p.rto               || '',
       policyIssueDate:   p.policyIssueDate   || '',
-      netPremium:        p.netPremium        ? parseFloat(p.netPremium)   : 0,
-      odPremium:         p.odPremium         ? parseFloat(p.odPremium)    : 0,
-      tpPremium:         p.tpPremium         ? parseFloat(p.tpPremium)    : 0,
+      netPremium:        p.netPremium        ? parseFloat(p.netPremium)      : 0,
+      odPremium:         p.odPremium         ? parseFloat(p.odPremium)       : 0,
+      tpPremium:         p.tpPremium         ? parseFloat(p.tpPremium)       : 0,
       fuelType:          p.fuelType          || '',
-      vehicleCc:         p.vehicleCc         ? parseFloat(p.vehicleCc)    : null,
-      vehicleGvw:        p.vehicleGvw        ? parseFloat(p.vehicleGvw)   : null,
-      vehicleSeating:    p.vehicleSeating    ? parseFloat(p.vehicleSeating) : null,
-      yom:               p.yom               ? parseInt(p.yom)            : null,
-      ncb:               p.ncb               ? parseFloat(p.ncb)          : 0,
+      vehicleCc:         p.vehicleCc         ? parseFloat(p.vehicleCc)       : null,
+      vehicleGvw:        p.vehicleGvw        ? parseFloat(p.vehicleGvw)      : null,
+      vehicleSeating:    p.vehicleSeating    ? parseFloat(p.vehicleSeating)  : null,
+      yom:               p.yom               ? parseInt(p.yom)               : null,
+      ncb:               p.ncb               ? parseFloat(p.ncb)             : 0,
       nilDep:            p.nilDep            || '',
       cpa:               p.cpa               || ''
     };
 
-    // Validate required fields — core always-required
+    // ── Validate required fields ────────────────────────────────────────────────
     var missingFields = [];
     if (!params.insurerId)       missingFields.push('insurerId');
     if (!params.productType)     missingFields.push('productType');
     if (!params.productSubType)  missingFields.push('productSubType');
     if (!params.policyIssueDate) missingFields.push('policyIssueDate');
     if (!params.netPremium && !params.odPremium && !params.tpPremium) {
-      missingFields.push('netPremium (or odPremium / tpPremium)');
+      missingFields.push('netPremium (or odPremium + tpPremium)');
     }
-
-    // Validate conditional fields based on product type
-    var missing = validateConditionalFields_(params);
-    missingFields = missingFields.concat(missing);
+    missingFields = missingFields.concat(validateConditionalFields_(params));
 
     if (missingFields.length > 0) {
       return apiResponse_({
         success:       false,
-        error:         'Missing required fields for productType: ' + params.productType,
-        missingFields: missingFields,
-        hint:          'Call ?action=config to see which fields are required for each product type.'
+        error:         'Missing required fields',
+        missingFields: missingFields
       });
     }
 
-    // Run rate lookup
+    // ── Lookup and return ───────────────────────────────────────────────────────
     var result = lookupRate(params);
-
-    // Apply condition adjustments and return final amounts
-    var finalResult = applyConditionAdjustments_(result, params);
-
-    return apiResponse_(finalResult);
+    return apiResponse_(applyConditionAdjustments_(result, params));
 
   } catch (err) {
     return apiResponse_({ success: false, error: err.message });

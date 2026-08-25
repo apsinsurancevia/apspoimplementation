@@ -32,49 +32,217 @@ function doGet(e) {
 }
 
 /**
- * Handles API requests from system integrations.
- * All parameters passed as URL query params.
+ * Handles API requests from external system integrations.
+ *
+ * All requests: GET ?api=true&apiKey=KEY&action=ACTION&...params
+ *
+ * Actions:
+ *   config      — returns insurers, product types, sub-types, field requirements, fuel types.
+ *                 Call once on startup to know what fields each product type needs.
+ *   subTypes    — returns sub-types for a given productType.
+ *                 Params: productType
+ *   subSubTypes — returns sub-sub-types for a given productType + productSubType.
+ *                 Returns [] when none exist for that combination.
+ *                 Params: productType, productSubType
+ *   rate        — validates and looks up the commission rate.
+ *                 Returns rate result including adjustment factors.
+ *                 Params: insurerId, productType, productSubType, productSubSubType (if needed),
+ *                         policyIssueDate, rto, netPremium, odPremium, tpPremium,
+ *                         and conditional: vehicleCc, vehicleGvw, vehicleSeating, yom,
+ *                         fuelType, ncb (numeric: 0/20/25/35/45/50), nilDep (Y or blank), cpa (Y or blank)
  */
 function handleAPIRequest(e) {
   try {
-    // API key validation — key stored in Script Properties, never in code
+
+    // ── API key validation ──────────────────────────────────────────────────────
     var expectedKey = PropertiesService.getScriptProperties().getProperty('RATE_API_KEY');
     if (expectedKey) {
-      var callerKey = e.parameter.apiKey || '';
+      var callerKey = (e.parameter && e.parameter.apiKey) ? e.parameter.apiKey : '';
       if (callerKey !== expectedKey) {
-        return ContentService
-          .createTextOutput(JSON.stringify({ success: false, error: 'Invalid or missing apiKey' }))
-          .setMimeType(ContentService.MimeType.JSON);
+        return apiResponse_({ success: false, error: 'Invalid or missing apiKey' });
       }
     }
 
+    var action = (e.parameter && e.parameter.action) ? e.parameter.action : 'rate';
+
+    // ── action=config ──────────────────────────────────────────────────────────
+    if (action === 'config') {
+      var config = getFormConfig();
+      return apiResponse_({
+        success:                  true,
+        insurers:                 config.insurers,
+        productTypes:             config.productTypes,
+        subTypesByProductType:    config.subTypesByProductType,
+        subSubTypesByProductType: config.subSubTypesByProductType,
+        fieldConfig:              config.fieldConfig,
+        fuelTypes:                config.fuelTypes,
+        notes: 'fieldConfig.{productType} tells you which optional fields apply for that product type.'
+      });
+    }
+
+    // ── action=subTypes ────────────────────────────────────────────────────────
+    if (action === 'subTypes') {
+      var productType = e.parameter.productType || '';
+      if (!productType) return apiResponse_({ success: false, error: 'productType is required' });
+      var subTypes = getProductSubTypes(productType);
+      return apiResponse_({ success: true, productType: productType, subTypes: subTypes });
+    }
+
+    // ── action=subSubTypes ─────────────────────────────────────────────────────
+    if (action === 'subSubTypes') {
+      var productType    = e.parameter.productType    || '';
+      var productSubType = e.parameter.productSubType || '';
+      if (!productType)    return apiResponse_({ success: false, error: 'productType is required' });
+      if (!productSubType) return apiResponse_({ success: false, error: 'productSubType is required' });
+      var subSubTypes = getProductSubSubTypes(productType, productSubType);
+      return apiResponse_({
+        success:        true,
+        productType:    productType,
+        productSubType: productSubType,
+        subSubTypes:    subSubTypes
+      });
+    }
+
+    // ── action=rate (default) ──────────────────────────────────────────────────
+    var p = e.parameter || {};
+
+    // Build params object from query string
     var params = {
-      insurerId:       e.parameter.insurerId       || '',
-      productType:     e.parameter.productType     || '',
-      productSubType:    e.parameter.productSubType    || '',
-      productSubSubType: e.parameter.productSubSubType || '',
-      rto:             e.parameter.rto             || '',
-      vehicleCc:       e.parameter.vehicleCc       ? parseFloat(e.parameter.vehicleCc)       : null,
-      vehicleGvw:      e.parameter.vehicleGvw      ? parseFloat(e.parameter.vehicleGvw)      : null,
-      vehicleSeating:  e.parameter.vehicleSeating  ? parseFloat(e.parameter.vehicleSeating)  : null,
-      policyIssueDate: e.parameter.policyIssueDate || '',
-      netPremium:      e.parameter.netPremium      ? parseFloat(e.parameter.netPremium)      : 0,
-      odPremium:       e.parameter.odPremium       ? parseFloat(e.parameter.odPremium)       : 0,
-      tpPremium:       e.parameter.tpPremium       ? parseFloat(e.parameter.tpPremium)       : 0,
-      fuelType:        e.parameter.fuelType        || '',
-      nilDep:          e.parameter.nilDep          || '',
-      ncb:             e.parameter.ncb             || '',
-      yom:             e.parameter.yom             ? parseInt(e.parameter.yom)               : null
+      insurerId:         p.insurerId         || '',
+      productType:       p.productType       || '',
+      productSubType:    p.productSubType    || '',
+      productSubSubType: p.productSubSubType || '',
+      rto:               p.rto               || '',
+      policyIssueDate:   p.policyIssueDate   || '',
+      netPremium:        p.netPremium        ? parseFloat(p.netPremium)   : 0,
+      odPremium:         p.odPremium         ? parseFloat(p.odPremium)    : 0,
+      tpPremium:         p.tpPremium         ? parseFloat(p.tpPremium)    : 0,
+      fuelType:          p.fuelType          || '',
+      vehicleCc:         p.vehicleCc         ? parseFloat(p.vehicleCc)    : null,
+      vehicleGvw:        p.vehicleGvw        ? parseFloat(p.vehicleGvw)   : null,
+      vehicleSeating:    p.vehicleSeating    ? parseFloat(p.vehicleSeating) : null,
+      yom:               p.yom               ? parseInt(p.yom)            : null,
+      ncb:               p.ncb               ? parseFloat(p.ncb)          : 0,
+      nilDep:            p.nilDep            || '',
+      cpa:               p.cpa               || ''
     };
+
+    // Validate required fields — core always-required
+    var missingFields = [];
+    if (!params.insurerId)       missingFields.push('insurerId');
+    if (!params.productType)     missingFields.push('productType');
+    if (!params.productSubType)  missingFields.push('productSubType');
+    if (!params.policyIssueDate) missingFields.push('policyIssueDate');
+    if (!params.netPremium && !params.odPremium && !params.tpPremium) {
+      missingFields.push('netPremium (or odPremium / tpPremium)');
+    }
+
+    // Validate conditional fields based on product type
+    var missing = validateConditionalFields_(params);
+    missingFields = missingFields.concat(missing);
+
+    if (missingFields.length > 0) {
+      return apiResponse_({
+        success:       false,
+        error:         'Missing required fields for productType: ' + params.productType,
+        missingFields: missingFields,
+        hint:          'Call ?action=config to see which fields are required for each product type.'
+      });
+    }
+
+    // Run rate lookup
     var result = lookupRate(params);
-    return ContentService
-      .createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
+
+    // Apply condition adjustments and return final amounts
+    var finalResult = applyConditionAdjustments_(result, params);
+
+    return apiResponse_(finalResult);
+
   } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return apiResponse_({ success: false, error: err.message });
   }
+}
+
+/**
+ * Validates that all conditional required fields are present for the given product type.
+ * Returns array of missing field names (empty = all good).
+ */
+function validateConditionalFields_(params) {
+  var missing = [];
+
+  var fc = {
+    'TW':               { cc: true,  fuel: true,  gvw: false, seating: false, yom: false },
+    'Pvt Car':          { cc: true,  fuel: true,  gvw: false, seating: false, yom: true  },
+    'GCV':              { cc: false, fuel: true,  gvw: true,  seating: false, yom: true  },
+    'PCV':              { cc: false, fuel: true,  gvw: false, seating: true,  yom: true  },
+    'Tractor':          { cc: false, fuel: false, gvw: false, seating: false, yom: true  },
+    'Construction Eqpt':{ cc: false, fuel: false, gvw: false, seating: false, yom: false }
+  };
+
+  var rules = fc[params.productType];
+  if (!rules) return missing; // unknown product type — let lookupRate handle it
+
+  if (rules.cc      && (params.vehicleCc    === null || params.vehicleCc    === undefined)) missing.push('vehicleCc');
+  if (rules.gvw     && (params.vehicleGvw   === null || params.vehicleGvw   === undefined)) missing.push('vehicleGvw');
+  if (rules.seating && (params.vehicleSeating === null || params.vehicleSeating === undefined)) missing.push('vehicleSeating');
+  if (rules.yom     && (params.yom          === null || params.yom          === undefined)) missing.push('yom');
+  if (rules.fuel    && !params.fuelType)                                                    missing.push('fuelType');
+
+  return missing;
+}
+
+/**
+ * Applies NCB, NilDep, CPA condition adjustments to the rate result.
+ * Adjustment logic mirrors CommissionApplication.gs:
+ *   If condition is ABSENT → adjustment fires (deduction applies).
+ *   ncb: 0 or blank = absent; nilDep/cpa: blank = absent, any value = present.
+ * Returns the result object with finalPoAmount and finalPiAmount added.
+ */
+function applyConditionAdjustments_(result, params) {
+  if (!result.success || result.matchStatus !== 'MATCHED') return result;
+
+  var poAmount  = (result.poAmount  || 0) + (result.poAmount2  || 0);
+  var piAmount  = (result.piAmount  || 0) + (result.piAmount2  || 0);
+
+  var ncbAdj    = (result.ncbAdj    !== null && result.ncbAdj    !== undefined) ? parseFloat(result.ncbAdj)    : null;
+  var nilDepAdj = (result.nilDepAdj !== null && result.nilDepAdj !== undefined) ? parseFloat(result.nilDepAdj) : null;
+  var cpaAdj    = (result.cpaAdj    !== null && result.cpaAdj    !== undefined) ? parseFloat(result.cpaAdj)    : null;
+
+  var adjustmentsApplied = [];
+
+  // NCB absent (ncb = 0 or blank) → ncbAdj deduction fires
+  if (ncbAdj !== null && (!params.ncb || params.ncb === 0)) {
+    poAmount = Math.round(poAmount * (1 - ncbAdj / 100) * 100) / 100;
+    piAmount = Math.round(piAmount * (1 - ncbAdj / 100) * 100) / 100;
+    adjustmentsApplied.push('ncb_adj: -' + ncbAdj + '%');
+  }
+
+  // NilDep absent (blank) → nilDepAdj deduction fires
+  if (nilDepAdj !== null && !params.nilDep) {
+    poAmount = Math.round(poAmount * (1 - nilDepAdj / 100) * 100) / 100;
+    piAmount = Math.round(piAmount * (1 - nilDepAdj / 100) * 100) / 100;
+    adjustmentsApplied.push('nil_dep_adj: -' + nilDepAdj + '%');
+  }
+
+  // CPA absent (blank) → cpaAdj deduction fires
+  if (cpaAdj !== null && !params.cpa) {
+    poAmount = Math.round(poAmount * (1 - cpaAdj / 100) * 100) / 100;
+    piAmount = Math.round(piAmount * (1 - cpaAdj / 100) * 100) / 100;
+    adjustmentsApplied.push('cpa_adj: -' + cpaAdj + '%');
+  }
+
+  result.finalPoAmount        = poAmount;
+  result.finalPiAmount        = piAmount;
+  result.adjustmentsApplied   = adjustmentsApplied;
+
+  return result;
+}
+
+/** Wraps any object as a JSON ContentService response. */
+function apiResponse_(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 // ── FORM DATA PROVIDERS (called by index.html via google.script.run) ──────────

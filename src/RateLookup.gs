@@ -37,6 +37,17 @@ function doGet(e) {
  */
 function handleAPIRequest(e) {
   try {
+    // API key validation — key stored in Script Properties, never in code
+    var expectedKey = PropertiesService.getScriptProperties().getProperty('RATE_API_KEY');
+    if (expectedKey) {
+      var callerKey = e.parameter.apiKey || '';
+      if (callerKey !== expectedKey) {
+        return ContentService
+          .createTextOutput(JSON.stringify({ success: false, error: 'Invalid or missing apiKey' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
     var params = {
       insurerId:       e.parameter.insurerId       || '',
       productType:     e.parameter.productType     || '',

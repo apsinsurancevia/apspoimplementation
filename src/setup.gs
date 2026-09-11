@@ -690,6 +690,95 @@ function backfillRTOStateCodes() {
   }
 }
 
+// ── PROMPT SEEDER ─────────────────────────────────────────────────────────────
+
+/**
+ * Default extraction prompt — works for any insurer statement before the
+ * insurer-specific column names are known. Refine once you have a real
+ * statement by replacing the prompt_template cell for that insurer.
+ *
+ * Run once after setup to pre-populate the Prompts tab:
+ *   seedDefaultPrompts()
+ *
+ * Re-running is safe — existing rows for an insurer_id are updated in-place;
+ * rows for other insurers are not touched.
+ */
+function seedDefaultPrompts() {
+  try {
+    var DEFAULT_PROMPT = [
+      'This is a brokerage statement from an insurance company to a broker.',
+      'Extract every policy row where a brokerage or commission amount is listed.',
+      'Return a JSON array. Each element must have:',
+      '  policy_no        — policy number or certificate number (string)',
+      '  brokerage_amount — brokerage / commission payable (number, no ₹ symbol, no commas)',
+      '  insured_name     — name of the insured/policyholder (string, or "" if absent)',
+      '  premium_amount   — net premium or gross premium (number, or 0 if absent)',
+      '  policy_date      — policy issue or inception date as DD-MM-YYYY (string, or "" if absent)',
+      'Rules:',
+      '  - Include only rows that have a numeric brokerage_amount > 0.',
+      '  - Do NOT include sub-total, grand-total, or header rows.',
+      '  - Do NOT include markdown, code fences, or any explanation.',
+      '  - If no data rows are found return an empty array: []',
+      'Example output: [{"policy_no":"1234/2026/123","brokerage_amount":850,"insured_name":"Ramesh Kumar","premium_amount":4200,"policy_date":"01-08-2026"}]'
+    ].join('\n');
+
+    // Insurer-specific notes appended to the default prompt (refine once you have
+    // actual statements and know the exact column headers used by each insurer).
+    var INSURER_NOTES = {
+      'OR':       'The Oriental Insurance statement typically lists brokerage in a column labelled "Brokerage Amt" or "Commission".',
+      'NIC':      'National Insurance statement typically uses columns "Policy No", "Brok. Amt", "Insured Name".',
+      'UIIC':     'United India statement typically uses "Policy Number", "Brokerage", "Name of Insured".',
+      'USGI':     'Universal Sompo statement typically uses "Policy No.", "Commission Amount", "Customer Name".',
+      'TATA':     'Tata AIG statement typically uses "Policy Number", "Agent Commission", "Insured Name".',
+      'BAJAJ':    'Bajaj Allianz statement typically uses "Policy No", "Brokerage", "Customer Name".',
+      'GO':       'Go Digit statement is usually CSV/Excel; columns are "Policy Number", "Brokerage", "Insured Name".',
+      'INDUSIND': 'IndusInd General statement — column names to be confirmed from actual statement.',
+      'NIA':      'New India Assurance statement typically uses "Policy No", "Brokerage Amount", "Insured".'
+    };
+
+    var ss    = SpreadsheetApp.openById(CONFIG.SHEET_BROKER_CONFIG);
+    var sheet = ss.getSheetByName('Prompts');
+    if (!sheet) throw new Error('Prompts tab not found in Broker Config Sheet');
+
+    var data = sheet.getDataRange().getValues();
+
+    // Build index of existing insurer rows
+    var existingRows = {};
+    for (var i = 1; i < data.length; i++) {
+      var id = (data[i][0] || '').toString().trim();
+      if (id) existingRows[id] = i + 1; // 1-indexed row number
+    }
+
+    var insurerIds = Object.keys(INSURER_NOTES);
+    var added = 0, updated = 0;
+
+    insurerIds.forEach(function(id) {
+      var fullPrompt = DEFAULT_PROMPT + '\n\nInsurer-specific note: ' + INSURER_NOTES[id];
+      var notes = 'Generic starter prompt — refine once you have the actual statement format';
+
+      if (existingRows[id]) {
+        // Update in-place
+        var rowNum = existingRows[id];
+        sheet.getRange(rowNum, 2).setValue(fullPrompt);
+        sheet.getRange(rowNum, 3).setValue(notes);
+        updated++;
+      } else {
+        // Append new row
+        sheet.appendRow([id, fullPrompt, notes]);
+        added++;
+      }
+    });
+
+    SpreadsheetApp.flush();
+    Logger.log('seedDefaultPrompts: ' + added + ' added, ' + updated + ' updated');
+    Logger.log('Refine each prompt once you have a sample statement from that insurer.');
+
+  } catch (e) {
+    Logger.log('seedDefaultPrompts failed: ' + e.message);
+    throw e;
+  }
+}
+
 // validateGrid() lives in CommissionApplication.gs
 
 // ── GRID TEMPLATE ─────────────────────────────────────────────────────────────

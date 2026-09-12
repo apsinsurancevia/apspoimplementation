@@ -722,18 +722,64 @@ function seedDefaultPrompts() {
       'Example output: [{"policy_no":"1234/2026/123","brokerage_amount":850,"insured_name":"Ramesh Kumar","premium_amount":4200,"policy_date":"01-08-2026"}]'
     ].join('\n');
 
-    // Insurer-specific notes appended to the default prompt (refine once you have
-    // actual statements and know the exact column headers used by each insurer).
+    // Insurer-specific notes appended to the default prompt.
+    // Column names are exact — sourced from create_insurer_templates.py.
     var INSURER_NOTES = {
-      'OR':       'The Oriental Insurance statement typically lists brokerage in a column labelled "Brokerage Amt" or "Commission".',
-      'NIC':      'National Insurance statement typically uses columns "Policy No", "Brok. Amt", "Insured Name".',
-      'UIIC':     'United India statement typically uses "Policy Number", "Brokerage", "Name of Insured".',
-      'USGI':     'Universal Sompo statement typically uses "Policy No.", "Commission Amount", "Customer Name".',
-      'TATA':     'Tata AIG statement typically uses "Policy Number", "Agent Commission", "Insured Name".',
-      'BAJAJ':    'Bajaj Allianz statement typically uses "Policy No", "Brokerage", "Customer Name".',
-      'GO':       'Go Digit statement is usually CSV/Excel; columns are "Policy Number", "Brokerage", "Insured Name".',
-      'INDUSIND': 'IndusInd General statement — column names to be confirmed from actual statement.',
-      'NIA':      'New India Assurance statement typically uses "Policy No", "Brokerage Amount", "Insured".'
+
+      'BAJAJ':
+        'Excel file, sheet name "irdaPayoutReport", first 4 rows are blank — data starts at row 5. ' +
+        'policy_no = "POLICY_REFERENCE". brokerage_amount = "TOTAL COMMISSION" (numeric, skip rows where this is 0 or blank). ' +
+        'insured_name = "CUSTOMER NAME". premium_amount = "NET PREMIUM". policy_date = "POLICY DATE".',
+
+      'GO':
+        'Excel file (.xlsb format), sheet name "AAZCA5637P". ' +
+        'policy_no = "policy_number". brokerage_amount = "TOTAL_AMT". ' +
+        'insured_name = "policy_holder". premium_amount = "net_premium". policy_date = "policy_issue_date".',
+
+      'NIC':
+        'PDF statement. Tables span multiple pages. ' +
+        'policy_no = "Policy Number". brokerage_amount = "Commission" (skip rows where this is 0 or blank). ' +
+        'insured_name = "Insured Name". premium_amount = "Premium". policy_date = "Issue Date".',
+
+      'NIA':
+        'PDF statement, two sections: "Policy Detail" and "Tax Summary". Extract from Policy Detail only. ' +
+        'policy_no = "Policy Number". brokerage_amount = "Brokerage". ' +
+        'insured_name = "Insured Name". premium_amount = "Premium". policy_date = "Policy Inception Date".',
+
+      'OR':
+        'PDF statement, up to 27 pages. Each policy appears as TWO rows — one for OD (own damage) and one for TP (third party). ' +
+        'CRITICAL: Sum the two rows and return ONE element per policy_no. ' +
+        'policy_no = "Policy No.". brokerage_amount = SUM of "Comm. / Ref. Comm. (Rs.)" across both OD and TP rows for the same policy. ' +
+        'insured_name = "Insured Name". premium_amount = SUM of "Premium / Ref. Premium (Rs.)" across both rows. ' +
+        'policy_date = "Policy Expiry Date". Negative entries (endorsement reversals) are valid — include as-is.',
+
+      'TATA':
+        'Excel file, sheet name "Report". ' +
+        'CRITICAL RULE 1 — Exclude TDS rows: skip any row where the "table_name" column equals "TDS". ' +
+        'CRITICAL RULE 2 — Primary producer only: the "Subproducer_Code" column identifies child/sub-producer rows. ' +
+        'Include ONLY rows where "Subproducer_Code" is blank or empty. Rows with a populated Subproducer_Code are sub-producer entries — skip them entirely. ' +
+        'After applying both filters, if the same Policy_No still appears more than once (e.g. different table_name values), ' +
+        'include each distinct table_name as a separate element — do not collapse them. ' +
+        'policy_no = "Policy_No". brokerage_amount = "Total_commission" (full value, do not subtract TDS — TDS rows are excluded above). ' +
+        'insured_name = "Customer_name". premium_amount = "Total_Premium". policy_date = "Policy_issue_date".',
+
+      'UIIC':
+        'Excel file, sheet name "Sheet1". Each policy appears as TWO rows — one for Motor OD (Dep No = "31 - Motor") ' +
+        'and one for Motor TP (Dep No = "32 - Motor TP"). ' +
+        'CRITICAL: Sum the two rows and return ONE element per policy_no. ' +
+        'policy_no = "Policy No". brokerage_amount = SUM of "Comm Amt" across both OD and TP rows for the same Policy No. ' +
+        'insured_name = "Insured Name". premium_amount = SUM of "Premium Amt" across both rows. ' +
+        'policy_date = "Policy Exp Dt".',
+
+      'USGI':
+        'Excel file with two sheets: "MOTOR" and "NON-MOTOR". Both sheets have one blank row above the header (header is row 2). ' +
+        'Extract from both sheets and combine. ' +
+        'policy_no = "policyNo". brokerage_amount = "total_amount". ' +
+        'insured_name = "customer_Name". premium_amount = "net_Premium". policy_date = "policy_Issue_Date".',
+
+      'INDUSIND':
+        'IndusInd General Insurance statement — column names to be confirmed from the actual statement file. ' +
+        'Use the generic extraction rules above.'
     };
 
     var ss    = SpreadsheetApp.openById(CONFIG.SHEET_BROKER_CONFIG);

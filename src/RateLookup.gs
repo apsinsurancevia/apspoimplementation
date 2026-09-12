@@ -431,12 +431,12 @@ function getFormConfig() {
     });
 
     var fieldConfig = {
-      'TW':               { cc: true,  fuel: true,  gvw: false, seating: false, yom: false, nilDep: false, ncb: false },
-      'Pvt Car':          { cc: true,  fuel: true,  gvw: false, seating: false, yom: true,  nilDep: true,  ncb: true  },
-      'GCV':              { cc: false, fuel: true,  gvw: true,  seating: false, yom: true,  nilDep: false, ncb: false },
-      'PCV':              { cc: false, fuel: true,  gvw: false, seating: true,  yom: true,  nilDep: false, ncb: false },
-      'Tractor':          { cc: false, fuel: false, gvw: false, seating: false, yom: true,  nilDep: false, ncb: false },
-      'Construction Eqpt':{ cc: false, fuel: false, gvw: false, seating: false, yom: false, nilDep: false, ncb: false }
+      'TW':               { cc: true,  fuel: ['Petrol', 'CNG', 'Electric'],                  gvw: false, seating: false, yom: false, nilDep: false, ncb: false },
+      'Pvt Car':          { cc: true,  fuel: ['Petrol', 'Diesel', 'CNG', 'Electric'],         gvw: false, seating: false, yom: true,  nilDep: true,  ncb: true  },
+      'GCV':              { cc: false, fuel: ['Diesel', 'CNG', 'Electric'],                   gvw: true,  seating: false, yom: true,  nilDep: false, ncb: false },
+      'PCV':              { cc: false, fuel: ['Diesel', 'CNG', 'Electric', 'Petrol'],         gvw: false, seating: true,  yom: true,  nilDep: false, ncb: false },
+      'Tractor':          { cc: false, fuel: false,                                           gvw: false, seating: false, yom: true,  nilDep: false, ncb: false },
+      'Construction Eqpt':{ cc: false, fuel: false,                                           gvw: false, seating: false, yom: false, nilDep: false, ncb: false }
     };
 
     return {
@@ -445,7 +445,7 @@ function getFormConfig() {
       subTypesByProductType:    subTypesByProductType,
       subSubTypesByProductType: subSubTypesByProductType,
       fieldConfig:              fieldConfig,
-      fuelTypes:                ['Petrol', 'Diesel', 'Bio Fuel', 'Electric']
+      fuelTypes:                ['Petrol', 'Diesel', 'CNG', 'Bio Fuel', 'Electric']
     };
 
   } catch (e) {

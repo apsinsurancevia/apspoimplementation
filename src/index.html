@@ -242,6 +242,136 @@
     color: #666;
     font-size: 14px;
   }
+
+  /* ── Multi-select insurer widget ────────────────────────────────────────── */
+  .multi-select-wrapper { position: relative; }
+
+  .multi-select-trigger {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 12px;
+    border: 1.5px solid #d1d9e6;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #222;
+    background: #fff;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.2s;
+  }
+
+  .multi-select-trigger:hover  { border-color: #0066cc; }
+  .multi-select-trigger.open   { border-color: #0066cc; box-shadow: 0 0 0 3px rgba(0,102,204,0.1); }
+
+  .ms-display   { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ms-display.placeholder { color: #888; }
+  .ms-arrow     { font-size: 11px; color: #888; margin-left: 8px; transition: transform 0.15s; }
+  .multi-select-trigger.open .ms-arrow { transform: rotate(180deg); }
+
+  .multi-select-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: #fff;
+    border: 1.5px solid #0066cc;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    z-index: 200;
+    max-height: 230px;
+    overflow-y: auto;
+  }
+
+  .ms-actions {
+    display: flex;
+    gap: 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e8eef8;
+    font-size: 12px;
+    position: sticky;
+    top: 0;
+    background: #f8faff;
+  }
+
+  .ms-actions a {
+    color: #0066cc;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .ms-actions a:hover { text-decoration: underline; }
+
+  .insurer-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #222;
+  }
+
+  .insurer-row:hover { background: #f0f4ff; }
+
+  .insurer-row input[type="checkbox"] {
+    width: 15px; height: 15px;
+    cursor: pointer;
+    accent-color: #0066cc;
+    flex-shrink: 0;
+  }
+
+  /* ── Comparison table ───────────────────────────────────────────────────── */
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .comparison-table th {
+    background: #1a1a2e;
+    color: #fff;
+    padding: 9px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .comparison-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #e8eef8;
+    vertical-align: middle;
+  }
+
+  .comparison-table tbody tr:last-child td { border-bottom: none; }
+  .comparison-table tbody tr:hover td { background: #f5f8ff; }
+
+  .rate-chip {
+    display: inline-block;
+    padding: 3px 9px;
+    background: #e3f0ff;
+    color: #0066cc;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .match-chip {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+
+  .match-chip.exact    { background: #2e7d32; color: #fff; }
+  .match-chip.pan      { background: #0066cc; color: #fff; }
+  .match-chip.no-match { background: #c62828; color: #fff; }
+  .match-chip.err      { background: #e65100; color: #fff; }
 </style>
 </head>
 <body>
@@ -265,9 +395,19 @@
 
         <div class="form-group">
           <label>Insurer <span class="req">*</span></label>
-          <select id="insurerId">
-            <option value="">— Select Insurer —</option>
-          </select>
+          <div class="multi-select-wrapper" id="insurerWrapper">
+            <div class="multi-select-trigger" id="insurerTrigger" onclick="toggleInsurerDropdown(event)">
+              <span class="ms-display placeholder" id="insurerDisplay">— Select Insurer(s) —</span>
+              <span class="ms-arrow">▾</span>
+            </div>
+            <div class="multi-select-dropdown hidden" id="insurerDropdown">
+              <div class="ms-actions">
+                <a onclick="selectAllInsurers()">All</a>
+                <a onclick="clearInsurers()">Clear</a>
+              </div>
+              <div id="insurerCheckboxList"></div>
+            </div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -375,6 +515,7 @@
 
 <script>
 var FORM_CONFIG = null;
+var SELECTED_INSURER_IDS = {};
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
@@ -387,25 +528,33 @@ document.addEventListener('DOMContentLoaded', function() {
     String(today.getMonth() + 1).padStart(2, '0') + '-' +
     String(today.getDate()).padStart(2, '0');
 
-  // ── Load insurers / fuel types / fieldConfig, then product types ────────────
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(e) {
+    var wrapper = document.getElementById('insurerWrapper');
+    if (wrapper && !wrapper.contains(e.target)) closeInsurerDropdown();
+  });
+
+  // ── Load config then product types ─────────────────────────────────────────
   google.script.run
     .withSuccessHandler(function(config) {
       FORM_CONFIG = config;
 
-      var insurerSel = document.getElementById('insurerId');
-      insurerSel.innerHTML = '<option value="">— Select Insurer —</option>';
+      // Build insurer checkbox list
+      var list = document.getElementById('insurerCheckboxList');
       (config.insurers || []).forEach(function(ins) {
-        var opt = document.createElement('option');
-        opt.value = ins.id; opt.textContent = ins.name;
-        insurerSel.appendChild(opt);
-      });
-
-      var fuelSel = document.getElementById('fuelType');
-      fuelSel.innerHTML = '<option value="">— All Fuel Types —</option>';
-      (config.fuelTypes || []).forEach(function(ft) {
-        var opt = document.createElement('option');
-        opt.value = ft; opt.textContent = ft;
-        fuelSel.appendChild(opt);
+        var row = document.createElement('label');
+        row.className = 'insurer-row';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.className = 'insurer-cb'; cb.value = ins.id;
+        cb.addEventListener('change', function() {
+          if (this.checked) SELECTED_INSURER_IDS[ins.id] = true;
+          else delete SELECTED_INSURER_IDS[ins.id];
+          updateInsurerDisplay();
+        });
+        var name = document.createElement('span');
+        name.textContent = ins.name;
+        row.appendChild(cb); row.appendChild(name);
+        list.appendChild(row);
       });
 
       google.script.run
@@ -462,7 +611,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (FORM_CONFIG && FORM_CONFIG.fieldConfig) {
       var fc = FORM_CONFIG.fieldConfig[selectedType] || {};
       toggleField('grpCc',         fc.cc);
-      toggleField('grpFuel',       fc.fuel);
+      updateFuelOptions(fc.fuel);
       toggleField('grpGvw',        fc.gvw);
       toggleField('grpSeating',    fc.seating);
       toggleField('grpYom',        fc.yom);
@@ -544,20 +693,101 @@ function hideAllVehicleFields() {
    'grpNilDep','grpNcb','grpVehicleAge'].forEach(function(id) { toggleField(id, false); });
 }
 
+// Repopulate fuel dropdown for the selected product; hide if no fuels defined
+function updateFuelOptions(fuelConfig) {
+  var grp = document.getElementById('grpFuel');
+  var sel = document.getElementById('fuelType');
+  sel.value = '';
+  if (!fuelConfig || !fuelConfig.length) {
+    grp.classList.add('hidden');
+    return;
+  }
+  sel.innerHTML = '<option value="">— All Fuel Types —</option>';
+  fuelConfig.forEach(function(ft) {
+    var opt = document.createElement('option');
+    opt.value = ft; opt.textContent = ft;
+    sel.appendChild(opt);
+  });
+  grp.classList.remove('hidden');
+}
+
+// ── Multi-select insurer helpers ───────────────────────────────────────────────
+
+function toggleInsurerDropdown(e) {
+  e.stopPropagation();
+  var dd      = document.getElementById('insurerDropdown');
+  var trigger = document.getElementById('insurerTrigger');
+  var isOpen  = !dd.classList.contains('hidden');
+  if (isOpen) { closeInsurerDropdown(); } else {
+    dd.classList.remove('hidden');
+    trigger.classList.add('open');
+  }
+}
+
+function closeInsurerDropdown() {
+  document.getElementById('insurerDropdown').classList.add('hidden');
+  document.getElementById('insurerTrigger').classList.remove('open');
+}
+
+function updateInsurerDisplay() {
+  var selected = getSelectedInsurers();
+  var display  = document.getElementById('insurerDisplay');
+  if (selected.length === 0) {
+    display.textContent = '— Select Insurer(s) —';
+    display.className   = 'ms-display placeholder';
+  } else if (selected.length === 1) {
+    display.textContent = selected[0].name;
+    display.className   = 'ms-display';
+  } else {
+    display.textContent = selected.length + ' insurers selected';
+    display.className   = 'ms-display';
+  }
+}
+
+function getSelectedInsurers() {
+  var result = [];
+  (FORM_CONFIG && FORM_CONFIG.insurers || []).forEach(function(ins) {
+    if (SELECTED_INSURER_IDS[ins.id]) result.push(ins);
+  });
+  return result;
+}
+
+function selectAllInsurers() {
+  (FORM_CONFIG && FORM_CONFIG.insurers || []).forEach(function(ins) {
+    SELECTED_INSURER_IDS[ins.id] = true;
+  });
+  document.querySelectorAll('.insurer-cb').forEach(function(cb) { cb.checked = true; });
+  updateInsurerDisplay();
+}
+
+function clearInsurers() {
+  SELECTED_INSURER_IDS = {};
+  document.querySelectorAll('.insurer-cb').forEach(function(cb) { cb.checked = false; });
+  updateInsurerDisplay();
+}
+
 // ── Rate Lookup ───────────────────────────────────────────────────────────────
 
 function doLookup() {
+  var selectedInsurers = getSelectedInsurers();
+  var productType      = document.getElementById('productType').value;
+  var policyIssueDate  = document.getElementById('policyIssueDate').value;
+
+  if (!selectedInsurers.length || !productType || !policyIssueDate) {
+    showError('Please select at least one insurer, a product type, and policy date.');
+    return;
+  }
+
   var btn = document.getElementById('lookupBtn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Looking up...';
 
-  var params = {
-    insurerId:         document.getElementById('insurerId').value,
-    productType:       document.getElementById('productType').value,
+  var baseParams = {
+    productType:       productType,
     productSubType:    document.getElementById('productSubType').value,
     productSubSubType: document.getElementById('productSubSubType').value,
     rto:               document.getElementById('rto').value.trim(),
-    policyIssueDate:   document.getElementById('policyIssueDate').value,
+    policyIssueDate:   policyIssueDate,
     fuelType:          document.getElementById('fuelType').value,
     vehicleCc:         parseFloat(document.getElementById('vehicleCc').value)      || null,
     vehicleGvw:        parseFloat(document.getElementById('vehicleGvw').value)     || null,
@@ -567,22 +797,96 @@ function doLookup() {
     ncb:               document.getElementById('ncb').checked    ? 'Y' : ''
   };
 
-  if (!params.insurerId || !params.productType || !params.policyIssueDate) {
-    showError('Please fill in Insurer, Product Type, and Policy Issue Date.');
-    btn.disabled = false; btn.innerHTML = 'Get Rate'; return;
+  var results = [];
+  var total   = selectedInsurers.length;
+
+  function fetchNext(idx) {
+    if (idx >= total) {
+      if (results.length === 1) {
+        showResult(results[0].result);
+      } else {
+        showMultiResult(results);
+      }
+      btn.disabled = false; btn.innerHTML = 'Get Rate';
+      return;
+    }
+    var ins    = selectedInsurers[idx];
+    var params = {};
+    for (var k in baseParams) params[k] = baseParams[k];
+    params.insurerId = ins.id;
+
+    btn.innerHTML = '<span class="spinner"></span>Looking up ' + (idx + 1) + ' / ' + total + '...';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        results.push({ insurer: ins, result: result });
+        fetchNext(idx + 1);
+      })
+      .withFailureHandler(function(e) {
+        results.push({ insurer: ins, result: { success: false, matchStatus: 'ERROR', notes: e.message || e } });
+        fetchNext(idx + 1);
+      })
+      .lookupRate(params);
   }
 
-  google.script.run
-    .withSuccessHandler(function(result) {
-      showResult(result); btn.disabled = false; btn.innerHTML = 'Get Rate';
-    })
-    .withFailureHandler(function(e) {
-      showError('Server error: ' + (e.message || e)); btn.disabled = false; btn.innerHTML = 'Get Rate';
-    })
-    .lookupRate(params);
+  fetchNext(0);
 }
 
 // ── Result display ─────────────────────────────────────────────────────────────
+
+function showMultiResult(results) {
+  var panel  = document.getElementById('resultPanel');
+  var header = document.getElementById('resultHeader');
+  var grid   = document.getElementById('resultGrid');
+
+  panel.classList.remove('hidden');
+  header.className    = 'result-header pan-india';
+  document.getElementById('matchBadge').className   = 'badge pan';
+  document.getElementById('matchBadge').textContent = results.length + ' INSURERS';
+  document.getElementById('matchLabel').textContent  = 'Rate comparison across selected insurers';
+  document.getElementById('tierBadge').classList.add('hidden');
+  document.getElementById('resultNotes').classList.add('hidden');
+
+  grid.innerHTML    = '';
+  grid.style.display = 'block';
+
+  var table = document.createElement('table');
+  table.className = 'comparison-table';
+
+  var thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th>Insurer</th><th>Match</th><th>PO Rate (OD)</th>' +
+    '<th>PO Rate (TP)</th><th>Basis</th><th>Tier</th></tr>';
+  table.appendChild(thead);
+
+  var tbody = document.createElement('tbody');
+  results.forEach(function(item) {
+    var r   = item.result;
+    var ins = item.insurer;
+    var tr  = document.createElement('tr');
+
+    var matchText  = r.matchStatus || 'NO MATCH';
+    var matchClass = 'no-match';
+    if (r.success && r.matchType === 'EXACT_RTO')  { matchText = 'Exact RTO';  matchClass = 'exact'; }
+    else if (r.success && r.matchType === 'PAN_INDIA') { matchText = 'Pan India'; matchClass = 'pan'; }
+    else if (r.matchStatus === 'ERROR')             { matchClass = 'err'; }
+
+    var poOD  = (r.poRate  != null)  ? '<span class="rate-chip">' + r.poRate  + '%</span>' : '—';
+    var poTP  = (r.poRate2 != null)  ? '<span class="rate-chip">' + r.poRate2 + '%</span>' : '—';
+    var basis = r.piOn || '—';
+    var tier  = (r.gridTier && r.gridTier !== 'Base') ? r.gridTier : '—';
+
+    tr.innerHTML = '<td><strong>' + ins.name + '</strong></td>' +
+      '<td><span class="match-chip ' + matchClass + '">' + matchText + '</span></td>' +
+      '<td>' + poOD + '</td>' +
+      '<td>' + poTP + '</td>' +
+      '<td style="font-size:12px;color:#666">' + basis + '</td>' +
+      '<td style="font-size:12px">' + tier + '</td>';
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  grid.appendChild(table);
+}
 
 function showResult(r) {
   var panel  = document.getElementById('resultPanel');
@@ -592,6 +896,8 @@ function showResult(r) {
   var tier   = document.getElementById('tierBadge');
   var grid   = document.getElementById('resultGrid');
   var notes  = document.getElementById('resultNotes');
+
+  grid.style.display = '';
 
   panel.classList.remove('hidden');
   header.className = 'result-header';
@@ -659,11 +965,15 @@ function showError(msg) {
   var panel  = document.getElementById('resultPanel');
   var header = document.getElementById('resultHeader');
   var badge  = document.getElementById('matchBadge');
+  var grid   = document.getElementById('resultGrid');
   panel.classList.remove('hidden');
-  header.className = 'result-header error';
-  badge.className  = 'badge error'; badge.textContent = 'ERROR';
+  header.className   = 'result-header error';
+  badge.className    = 'badge error'; badge.textContent = 'ERROR';
   document.getElementById('matchLabel').textContent  = msg;
-  document.getElementById('resultGrid').innerHTML    = '';
+  grid.innerHTML     = '';
+  grid.style.display = '';
+  var btn = document.getElementById('lookupBtn');
+  btn.disabled = false; btn.innerHTML = 'Get Rate';
 }
 </script>
 </body>

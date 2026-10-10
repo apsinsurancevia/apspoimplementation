@@ -1,16 +1,22 @@
 /**
- * CaliberPO — Field Mapping Wizard
+ * CaliberPO — Field Mapping Wizard + Value Mapping Wizard
  *
- * One-time per-broker setup that maps source file column headers
- * to CaliberPO standard field names.
+ * Two-wizard setup that handles both column-name mapping and value-level mapping.
  *
- * Workflow:
+ * WIZARD 1 — Field Mapping (run once, re-run only if broker changes export format):
  *   1. Drop sales data file into CaliberPO/Input/ folder
- *   2. Run runMappingWizard()  → reads headers, alias + AI match → Mapping_Review tab
- *   3. Human reviews yellow/red rows in Mapping_Review tab
- *   4. Run confirmMapping()    → writes Field_Mapping tab, batch is ready
+ *   2. Run runMappingWizard()    → reads headers, alias + AI match → Mapping_Review tab
+ *   3. Human reviews Mapping_Review tab (fix yellow/red rows)
+ *   4. Run confirmMapping()      → writes Field_Mapping tab
  *
- * After first run, Field_Mapping is stable. Only re-run if broker changes export format.
+ * WIZARD 2 — Value Mapping (run for each new customer/source format):
+ *   5. Run runValueMappingWizard() → scans unique insurer names + product types,
+ *                                    checks existing maps, AI-suggests unknowns
+ *                                    → Value_Mapping_Review tab
+ *   6. Human reviews Value_Mapping_Review tab (fix red rows)
+ *   7. Run confirmValueMapping()   → appends new rows to Insurer_Code_Map + Product_Map
+ *
+ * Then: Run runCommissionBatch() — all values resolve correctly.
  */
 
 // ── REQUIRED FIELDS ───────────────────────────────────────────────────────────
@@ -426,6 +432,425 @@ function getAIMappingSuggestions_(sourceHeaders, unmatchedFields) {
 
   } catch (e) {
     Logger.log('getAIMappingSuggestions_ failed (non-fatal): ' + e.message);
+    return [];
+  }
+}
+
+// ── VALUE MAPPING WIZARD ──────────────────────────────────────────────────────
+
+var INSURER_CANONICALS         = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA'];
+var PRODUCT_TYPE_CANONICALS    = ['TW','Pvt Car','GCV','PCV','Tractor','Construction Eqpt'];
+var PRODUCT_SUBTYPE_CANONICALS = ['Scooter/Bike','1+1','SAOD','SATP','New (1+5)','New (5+5)'];
+
+/**
+ * Wizard 2 — Step 1 of 2.
+ *
+ * Scans the source file for all unique insurer names, product types, and sub
+ * types. Checks which are already resolved by the existing Insurer_Code_Map and
+ * Product_Map tabs. Calls Claude AI to suggest canonical values for any unknown
+ * entries, then writes a colour-coded Value_Mapping_Review tab.
+ *
+ * Run AFTER confirmMapping(). Wizard 1 must be complete first.
+ * Human reviews the tab, then runs confirmValueMapping().
+ */
+function runValueMappingWizard() {
+  return wrapWithErrorHandling('runValueMappingWizard', function() {
+
+    Logger.log('=== ValueMappingWizard: Starting ===');
+
+    // ── 1. Load Field_Mapping to resolve source column names ─────────────────
+    var fieldMap = getSheetDataAsObjects(CONFIG.SHEET_BROKER_CONFIG, 'Field_Mapping');
+    if (!fieldMap || fieldMap.length < 5) {
+      throw new Error(
+        'Field_Mapping is empty. Run runMappingWizard() + confirmMapping() before ' +
+        'running the value mapping wizard.'
+      );
+    }
+
+    var brokerColFor = {};
+    fieldMap.forEach(function(m) {
+      if (m.standard_field) brokerColFor[m.standard_field] = m.broker_field || '';
+    });
+
+    var insurerColName  = brokerColFor['insurance_company'] || '';
+    var prodTypeColName = brokerColFor['product_type']       || '';
+    var subTypeColName  = brokerColFor['product_sub_type']   || '';
+
+    if (!insurerColName || !prodTypeColName) {
+      throw new Error(
+        'insurance_company and product_type must be in Field_Mapping. ' +
+        'Complete Wizard 1 first.'
+      );
+    }
+
+    // ── 2. Read input file ───────────────────────────────────────────────────
+    var inputFiles = listFilesInFolder(CONFIG.FOLDER_INPUT);
+    if (!inputFiles || inputFiles.length === 0) {
+      throw new Error('No files found in CaliberPO/Input/. Drop the sales file there first.');
+    }
+    inputFiles.sort(function(a, b) { return b.createdDate - a.createdDate; });
+
+    var inputSS    = SpreadsheetApp.openById(inputFiles[0].id);
+    var inputSheet = inputSS.getSheets()[0];
+    var inputData  = inputSheet.getDataRange().getValues();
+    if (inputData.length < 2) throw new Error('Input file has no data rows.');
+
+    var sourceHeaders = inputData[0].map(function(h) { return h ? h.toString().trim() : ''; });
+    var sourceRows    = inputData.slice(1);
+
+    var headerIdx = {};
+    sourceHeaders.forEach(function(h, i) { if (h) headerIdx[h.toLowerCase()] = i; });
+
+    var insurerIdx  = headerIdx[insurerColName.toLowerCase()];
+    var prodTypeIdx = headerIdx[prodTypeColName.toLowerCase()];
+    var subTypeIdx  = subTypeColName ? headerIdx[subTypeColName.toLowerCase()] : undefined;
+
+    if (insurerIdx === undefined || prodTypeIdx === undefined) {
+      throw new Error(
+        'Source column "' + insurerColName + '" or "' + prodTypeColName + '" ' +
+        'not found in the input file. Check Field_Mapping matches this file.'
+      );
+    }
+
+    // ── 3. Collect unique cell values ────────────────────────────────────────
+    var uniqueInsurers  = {};
+    var uniqueProdTypes = {};
+    var uniqueSubTypes  = {};
+
+    sourceRows.forEach(function(row) {
+      var ins = row[insurerIdx]  ? row[insurerIdx].toString().trim()  : '';
+      var pt  = row[prodTypeIdx] ? row[prodTypeIdx].toString().trim() : '';
+      var st  = subTypeIdx !== undefined && row[subTypeIdx]
+                  ? row[subTypeIdx].toString().trim() : '';
+      if (ins) uniqueInsurers[ins]  = true;
+      if (pt)  uniqueProdTypes[pt]  = true;
+      if (st)  uniqueSubTypes[st]   = true;
+    });
+
+    Logger.log('Unique insurer values: '  + Object.keys(uniqueInsurers).length);
+    Logger.log('Unique product types: '   + Object.keys(uniqueProdTypes).length);
+    Logger.log('Unique sub types: '       + Object.keys(uniqueSubTypes).length);
+
+    // ── 4. Check against existing maps ──────────────────────────────────────
+    var insurerMap = getSheetData(CONFIG.SHEET_BROKER_CONFIG, 'Insurer_Code_Map');
+    var productMap = getSheetData(CONFIG.SHEET_BROKER_CONFIG, 'Product_Map');
+
+    var reviewEntries   = [];
+    var unmappedIns     = [];
+    var unmappedPT      = [];
+    var unmappedST      = [];
+
+    Object.keys(uniqueInsurers).forEach(function(val) {
+      var found = lookupInMap(insurerMap, val);
+      if (found) {
+        reviewEntries.push({ valueType: 'INSURER', brokerField: insurerColName,
+          brokerValue: val, suggested: found, confidence: 'HIGH',
+          status: 'AUTO_MATCHED', notes: 'Already in Insurer_Code_Map' });
+      } else {
+        unmappedIns.push(val);
+      }
+    });
+
+    Object.keys(uniqueProdTypes).forEach(function(val) {
+      var found = lookupProductMap(productMap, prodTypeColName, val);
+      if (found) {
+        reviewEntries.push({ valueType: 'PRODUCT_TYPE', brokerField: prodTypeColName,
+          brokerValue: val, suggested: found, confidence: 'HIGH',
+          status: 'AUTO_MATCHED', notes: 'Already in Product_Map' });
+      } else {
+        unmappedPT.push(val);
+      }
+    });
+
+    if (subTypeColName) {
+      Object.keys(uniqueSubTypes).forEach(function(val) {
+        var found = lookupProductMap(productMap, subTypeColName, val);
+        if (found) {
+          reviewEntries.push({ valueType: 'PRODUCT_SUB_TYPE', brokerField: subTypeColName,
+            brokerValue: val, suggested: found, confidence: 'HIGH',
+            status: 'AUTO_MATCHED', notes: 'Already in Product_Map' });
+        } else {
+          unmappedST.push(val);
+        }
+      });
+    }
+
+    // ── 5. Claude AI for unmapped values ────────────────────────────────────
+    var totalUnmapped = unmappedIns.length + unmappedPT.length + unmappedST.length;
+    if (totalUnmapped > 0) {
+      Logger.log('Calling Claude for ' + totalUnmapped + ' unmapped values...');
+      var aiResults = getValueMappingSuggestions_(unmappedIns, unmappedPT, unmappedST);
+
+      var aiHandled = {};
+      aiResults.forEach(function(s) {
+        var key  = s.value_type + ':' + s.broker_value;
+        aiHandled[key] = true;
+        var bField = s.value_type === 'INSURER'              ? insurerColName :
+                     s.value_type === 'PRODUCT_TYPE'         ? prodTypeColName :
+                                                               subTypeColName;
+        var canonical = (s.canonical && s.canonical !== 'NONE') ? s.canonical : '';
+        reviewEntries.push({
+          valueType:   s.value_type,
+          brokerField: bField,
+          brokerValue: s.broker_value,
+          suggested:   canonical,
+          confidence:  s.confidence || 'LOW',
+          status:      canonical ? ('AI_SUGGESTED_' + (s.confidence || 'LOW')) : 'NEEDS_REVIEW',
+          notes:       s.reason || ''
+        });
+      });
+
+      // Add any values Claude silently skipped
+      unmappedIns.concat(unmappedPT).concat(unmappedST).forEach(function(val) {
+        // Determine type by checking which list it came from
+        var vt = unmappedIns.indexOf(val) !== -1 ? 'INSURER' :
+                 unmappedPT.indexOf(val)  !== -1 ? 'PRODUCT_TYPE' : 'PRODUCT_SUB_TYPE';
+        if (!aiHandled[vt + ':' + val]) {
+          var bField = vt === 'INSURER' ? insurerColName :
+                       vt === 'PRODUCT_TYPE' ? prodTypeColName : subTypeColName;
+          reviewEntries.push({ valueType: vt, brokerField: bField, brokerValue: val,
+            suggested: '', confidence: 'NONE', status: 'NEEDS_REVIEW',
+            notes: 'No AI suggestion — pick from dropdown' });
+        }
+      });
+    }
+
+    // ── 6. Write review tab ──────────────────────────────────────────────────
+    writeValueMappingReview_(reviewEntries);
+
+    var autoCount  = reviewEntries.filter(function(r) { return r.status === 'AUTO_MATCHED'; }).length;
+    var aiCount    = reviewEntries.filter(function(r) { return r.status.indexOf('AI_SUGGESTED') === 0; }).length;
+    var needsCount = reviewEntries.filter(function(r) { return r.status === 'NEEDS_REVIEW'; }).length;
+
+    Logger.log('=== ValueMappingWizard: Complete ===');
+    Logger.log('Auto-matched: ' + autoCount + '  AI-suggested: ' + aiCount +
+               '  Needs review: ' + needsCount);
+    Logger.log('Open Value_Mapping_Review tab. Fix red rows, then run confirmValueMapping().');
+
+    return { total: reviewEntries.length, autoMatched: autoCount,
+             aiSuggested: aiCount, needsReview: needsCount };
+
+  }, 'MANUAL');
+}
+
+/**
+ * Wizard 2 — Step 2 of 2.
+ *
+ * Reads the confirmed Value_Mapping_Review tab and appends new rows to
+ * Insurer_Code_Map and Product_Map. Already-mapped values (AUTO_MATCHED) are
+ * skipped. Throws if any non-green row has an empty your_selection.
+ */
+function confirmValueMapping() {
+  return wrapWithErrorHandling('confirmValueMapping', function() {
+
+    Logger.log('=== confirmValueMapping: Starting ===');
+
+    var ss = SpreadsheetApp.openById(CONFIG.SHEET_BROKER_CONFIG);
+    var reviewSheet = ss.getSheetByName('Value_Mapping_Review');
+    if (!reviewSheet) {
+      throw new Error('Value_Mapping_Review not found. Run runValueMappingWizard() first.');
+    }
+
+    var data = reviewSheet.getDataRange().getValues();
+    // row 0 = col headers, row 1 = instruction, rows 2+ = data
+
+    var existingInsurerMap = getSheetData(CONFIG.SHEET_BROKER_CONFIG, 'Insurer_Code_Map');
+    var existingProductMap = getSheetData(CONFIG.SHEET_BROKER_CONFIG, 'Product_Map');
+
+    var newInsurerRows = [];
+    var newProductRows = [];
+    var needsReview    = [];
+
+    for (var i = 2; i < data.length; i++) {
+      var row        = data[i];
+      var valueType  = row[0] ? row[0].toString().trim() : '';
+      var brokerField = row[1] ? row[1].toString().trim() : '';
+      var brokerValue = row[2] ? row[2].toString().trim() : '';
+      var status     = row[4] ? row[4].toString().trim() : '';
+      var yourSel    = row[5] ? row[5].toString().trim() : '';
+
+      if (!brokerValue) continue;
+      if (status === 'AUTO_MATCHED') continue;
+
+      if (!yourSel) {
+        needsReview.push(valueType + ': "' + brokerValue + '"');
+        continue;
+      }
+
+      if (valueType === 'INSURER') {
+        if (!lookupInMap(existingInsurerMap, brokerValue)) {
+          newInsurerRows.push([brokerValue, yourSel, 'Added via value mapping wizard']);
+        }
+      } else if (valueType === 'PRODUCT_TYPE') {
+        if (!lookupProductMap(existingProductMap, brokerField, brokerValue)) {
+          newProductRows.push([brokerField, brokerValue, 'product_type', yourSel,
+                               'Added via value mapping wizard']);
+        }
+      } else if (valueType === 'PRODUCT_SUB_TYPE') {
+        if (!lookupProductMap(existingProductMap, brokerField, brokerValue)) {
+          newProductRows.push([brokerField, brokerValue, 'product_sub_type', yourSel,
+                               'Added via value mapping wizard']);
+        }
+      }
+    }
+
+    if (needsReview.length > 0) {
+      throw new Error(
+        'These values have no selection in "your_selection":\n' +
+        needsReview.join('\n') +
+        '\n\nFill them in before running confirmValueMapping().'
+      );
+    }
+
+    var icmSheet = ss.getSheetByName('Insurer_Code_Map');
+    var pmSheet  = ss.getSheetByName('Product_Map');
+
+    if (newInsurerRows.length > 0) {
+      icmSheet.getRange(icmSheet.getLastRow() + 1, 1, newInsurerRows.length, 3)
+        .setValues(newInsurerRows);
+    }
+    if (newProductRows.length > 0) {
+      pmSheet.getRange(pmSheet.getLastRow() + 1, 1, newProductRows.length, 5)
+        .setValues(newProductRows);
+    }
+
+    SpreadsheetApp.flush();
+
+    Logger.log('confirmValueMapping: ' + newInsurerRows.length + ' insurer rows, ' +
+               newProductRows.length + ' product rows appended to maps.');
+    Logger.log('Maps updated. Run runCommissionBatch() to process the sales data.');
+
+    return { newInsurerMappings: newInsurerRows.length, newProductMappings: newProductRows.length };
+
+  }, 'MANUAL');
+}
+
+/**
+ * Creates / replaces the Value_Mapping_Review tab.
+ */
+function writeValueMappingReview_(entries) {
+  var ss = SpreadsheetApp.openById(CONFIG.SHEET_BROKER_CONFIG);
+  var existing = ss.getSheetByName('Value_Mapping_Review');
+  if (existing) ss.deleteSheet(existing);
+  var sheet = ss.insertSheet('Value_Mapping_Review');
+
+  var colHeaders = ['value_type','broker_field','broker_value',
+                    'suggested_canonical','status','your_selection','notes'];
+
+  sheet.getRange(1, 1, 1, colHeaders.length).setValues([colHeaders]);
+  sheet.getRange(1, 1, 1, colHeaders.length)
+    .setBackground('#1F3864').setFontColor('#FFFFFF').setFontWeight('bold');
+
+  sheet.getRange(2, 1, 1, colHeaders.length).merge();
+  sheet.getRange(2, 1).setValue(
+    'GREEN = Already in map — no action needed.  ' +
+    'YELLOW/ORANGE = AI-suggested — verify "your_selection".  ' +
+    'RED = Needs review — pick from dropdown.  ' +
+    'Run confirmValueMapping() when all non-green rows have a value.'
+  ).setBackground('#f3f3f3').setFontStyle('italic').setWrap(true);
+  sheet.setRowHeight(2, 40);
+
+  entries.forEach(function(entry, idx) {
+    var rowNum  = idx + 3;
+    var rowData = [
+      entry.valueType, entry.brokerField, entry.brokerValue,
+      entry.suggested || '', entry.status, entry.suggested || '',
+      entry.notes || ''
+    ];
+    sheet.getRange(rowNum, 1, 1, colHeaders.length).setValues([rowData]);
+    sheet.getRange(rowNum, 1, 1, colHeaders.length)
+      .setBackground(MAPPING_COLOURS[entry.status] || '#ffffff');
+
+    if (entry.status !== 'AUTO_MATCHED') {
+      var canonicals = entry.valueType === 'INSURER'           ? INSURER_CANONICALS :
+                       entry.valueType === 'PRODUCT_TYPE'      ? PRODUCT_TYPE_CANONICALS :
+                                                                  PRODUCT_SUBTYPE_CANONICALS;
+      var rule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(canonicals, true)
+        .setAllowInvalid(true)
+        .setHelpText('Select the canonical value for "' + entry.brokerValue + '"')
+        .build();
+      sheet.getRange(rowNum, 6).setDataValidation(rule);
+    } else {
+      sheet.getRange(rowNum, 6).setFontColor('#888888');
+    }
+  });
+
+  sheet.setFrozenRows(2);
+  sheet.autoResizeColumns(1, colHeaders.length);
+  sheet.setColumnWidth(3, 260);
+  sheet.setColumnWidth(6, 200);
+
+  Logger.log('Value_Mapping_Review written: ' + entries.length + ' entries.');
+}
+
+/**
+ * Calls Claude API to suggest canonical codes for unmapped values.
+ * Non-fatal — returns [] on any failure.
+ */
+function getValueMappingSuggestions_(unmappedIns, unmappedPT, unmappedST) {
+  try {
+    var apiKey = PropertiesService.getScriptProperties().getProperty('CLAUDE_API_KEY');
+    if (!apiKey) {
+      Logger.log('CLAUDE_API_KEY not set — skipping AI value mapping.');
+      return [];
+    }
+
+    var sections = [];
+    if (unmappedIns.length > 0) {
+      sections.push(
+        'INSURER names — map to one of: ' + INSURER_CANONICALS.join(', ') + '\n' +
+        unmappedIns.map(function(v) { return '  "' + v + '"'; }).join('\n')
+      );
+    }
+    if (unmappedPT.length > 0) {
+      sections.push(
+        'PRODUCT_TYPE values — map to one of: ' + PRODUCT_TYPE_CANONICALS.join(', ') + '\n' +
+        unmappedPT.map(function(v) { return '  "' + v + '"'; }).join('\n')
+      );
+    }
+    if (unmappedST.length > 0) {
+      sections.push(
+        'PRODUCT_SUB_TYPE values — map to one of: ' + PRODUCT_SUBTYPE_CANONICALS.join(', ') + '\n' +
+        unmappedST.map(function(v) { return '  "' + v + '"'; }).join('\n')
+      );
+    }
+
+    var prompt =
+      'You are mapping motor insurance CRM data values to canonical system codes.\n\n' +
+      sections.join('\n\n') + '\n\n' +
+      'Use "NONE" as canonical if no match is possible.\n\n' +
+      'Respond with ONLY a valid JSON array — no explanation, no markdown:\n' +
+      '[{"value_type":"INSURER|PRODUCT_TYPE|PRODUCT_SUB_TYPE","broker_value":"...",' +
+      '"canonical":"...","confidence":"HIGH|MEDIUM|LOW","reason":"one line"}]';
+
+    var response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+      method:  'POST',
+      headers: {
+        'x-api-key':         apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type':      'application/json'
+      },
+      payload: JSON.stringify({
+        model:      CONFIG.CLAUDE_MODEL,
+        max_tokens: 1024,
+        messages:   [{ role: 'user', content: prompt }]
+      }),
+      muteHttpExceptions: true
+    });
+
+    var respData  = JSON.parse(response.getContentText());
+    if (!respData.content || !respData.content[0]) return [];
+    var text      = respData.content[0].text;
+    var jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return [];
+
+    var results = JSON.parse(jsonMatch[0]);
+    Logger.log('AI returned ' + results.length + ' value mapping suggestions');
+    return results;
+
+  } catch (e) {
+    Logger.log('getValueMappingSuggestions_ failed (non-fatal): ' + e.message);
     return [];
   }
 }

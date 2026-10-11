@@ -206,7 +206,7 @@ var STATEMENT_HEADERS_DATA = [
     'Premium (Rs.) (Ref.)',
     'Insured Name',
     'Policy Expiry Date',
-    'PDF; header block and broker details block repeat on every page — ignore; footer (Department Total, Grand Total, Cumulative figures, Gross Payable, Net Payable) — ignore; each motor policy has TWO data rows (one OD, one TP — identified by Pol.Type column); sum Comm. (Rs.) (Ref.) and Premium (Rs.) (Ref.) across both rows per Policy No.'
+    'PDF — structurally noisy; each policy spans TWO STACKED PHYSICAL LINES (not clean table rows): line 1 has Policy No./Colln. No./Insured Name; line 2 has Premium and Comm. figures split by OD/TP. Header block and broker details block repeat on every page. Footer has Department Total, Grand Total, cumulative figures. Requires special parsing — flag before building master-grid mapper.'
   ],
   [
     'NIC', 'pdf', '', 1,
@@ -936,11 +936,18 @@ function seedDefaultPrompts() {
         '(2) Broker details block repeated on every page: Name, Address, Broker Code, Licence No., PAN Number, Lic. Expiry Date, Process Date, I Tax Rate. ' +
         '(3) Footer/summary block at the end: Department Total, Grand Total, Cumulative Gross Commission, Cumulative Income Tax, Gross Commission, Less: Income Tax for the Current Period (Including Surcharge), Gross Payable, Add: GST for the current period, Net Payable. ' +
         'The data table has these exact column headers: Dept, Policy No., Insured Name, Colln. No., Prod. Code, Pol.Type, Cvr., Instl No., Policy Expiry Date, Bank Fin. Type Description, Premium (Rs.) (Ref.), Comm. (Rs.) (Ref.), Premium / Comm. Rate (%), Description, GST Exempt/Non-Exempt. ' +
-        'CRITICAL — OD and TP structure: each motor policy appears as TWO rows — one where Pol.Type indicates OD (own damage) and one where Pol.Type indicates TP (third party). ' +
-        'Sum both rows and return ONE element per Policy No. ' +
+        'STRUCTURAL NOTE — Oriental\'s layout is different from other insurers: ' +
+        'each policy does NOT appear as two clean table rows. Instead, each policy spans TWO STACKED PHYSICAL LINES ' +
+        'in the PDF: the first physical line carries Policy No., Insured Name, Colln. No., Prod. Code, Pol.Type, ' +
+        'Cvr., Instl No., Policy Expiry Date, Bank Fin. Type Description, GST Exempt/Non-Exempt; ' +
+        'the second physical line carries the Premium (Rs.) (Ref.) and Comm. (Rs.) (Ref.) figures, ' +
+        'split between OD and TP components. ' +
+        'When the PDF is flattened to text these two physical lines may appear interleaved or merged. ' +
+        'Group all content belonging to the same Policy No. and sum the OD and TP figures. ' +
+        'Return ONE element per Policy No. ' +
         'policy_no = "Policy No.". ' +
-        'brokerage_amount = SUM of "Comm. (Rs.) (Ref.)" across the OD and TP rows for the same Policy No. ' +
-        'premium_amount = SUM of "Premium (Rs.) (Ref.)" across both rows. ' +
+        'brokerage_amount = total of all "Comm. (Rs.) (Ref.)" values (OD + TP) for the same Policy No. ' +
+        'premium_amount = total of all "Premium (Rs.) (Ref.)" values for the same Policy No. ' +
         'insured_name = "Insured Name". policy_date = "Policy Expiry Date". ' +
         'Negative entries (endorsement reversals) are valid — include as-is with the negative sign.',
 

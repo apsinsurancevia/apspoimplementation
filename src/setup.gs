@@ -84,7 +84,8 @@ var INSURER_MASTER_DATA = [
   ['INDUSIND','INDUSIND GENERAL INSURANCE CO LTD','[GSTIN]','[STATE]','[CODE]','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
   ['NIA','THE NEW INDIA ASSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
   ['ICICI','ICICI LOMBARD GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
-  ['KOTAK','ZURICH KOTAK GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y']
+  ['KOTAK','ZURICH KOTAK GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
+  ['SBIG','SBI GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y']
 ];
 
 // ── FIELD MAPPING SEED DATA ───────────────────────────────────────────────────
@@ -158,7 +159,12 @@ var INSURER_CODE_MAP_DATA = [
   ['Zurich Kotak','KOTAK','Current rebranded name'],
   ['ZURICH KOTAK','KOTAK','Current rebranded uppercase'],
   ['Zurich Kotak General Insurance','KOTAK','Current full name'],
-  ['ZKGI','KOTAK','GST / rate card abbreviation']
+  ['ZKGI','KOTAK','GST / rate card abbreviation'],
+  ['SBIG','SBIG','Direct match'],
+  ['SBI General','SBIG','Short name variant'],
+  ['SBI GENERAL','SBIG','Uppercase variant'],
+  ['SBI General Insurance','SBIG','Full name variant'],
+  ['SBI GENERAL INSURANCE','SBIG','Full name uppercase']
 ];
 
 // ── PRODUCT MAP SEED DATA ─────────────────────────────────────────────────────
@@ -291,6 +297,15 @@ var STATEMENT_HEADERS_DATA = [
     'CUSTOMER NAME',
     'Policy/Endorsement Issue Date',
     'Formerly Kotak General / Kotak Mahindra General, now Zurich Kotak General Insurance (ZKGI); Total Commission = OD/Basic commission + Motor TP commission + Terrisom commission (pre-TDS); Net Commission is post-TDS — do NOT use; TDS already deducted in Net Commission'
+  ],
+  [
+    'SBIG', 'xlsx', '', 1,
+    'POLICY_NO',
+    'TOTAL_COMMISSION_AMOUNT',
+    'GROSS_PREMIUM',
+    'INSURED_NAME',
+    'POLICY_ISSUE_DATE',
+    'TOTAL_COMMISSION_AMOUNT = FIXED_COMMISSION_AMOUNT + TERRORISM_COMMISSION_AMT (pre-summed); for co-insurance rows include only where PAY_COMMISSION_TO_LEADER indicates leader; skip rows where TOTAL_COMMISSION_AMOUNT is 0 or blank'
   ]
 ];
 
@@ -968,6 +983,28 @@ function seedDefaultPrompts() {
         'Mappings: policy_no = "PolicyNumber". ' +
         'insured_name = "InsuredName". premium_amount = "NET_PREMIUM". policy_date = "Month".',
 
+      'SBIG':
+        'Excel file. Insurer is SBI General Insurance Company Limited (SBIG). ' +
+        'Columns confirmed from actual statement: UW_UNIQUE_REF_CODE, Statement MONTH, POLICY_ISSUE_DATE, ' +
+        'SBIG_BRANCH_NAME, OF_LOB_NAME, LOB_1, PRODUCT_CODE, PRODUCT_NAME, SEGMENT, DISTRIBUTION_CHANNEL, ' +
+        'DISTRIBUTION_CHANNEL_1, INSURED_NAME, POLICY_1, POLICY_NO, POLICY_START_DATE, POLICY_EXP_DATE, ' +
+        'ENDORSEMENT_NO, ENDORSEMENT_REASON, GROSS_PREMIUM, COMMISSION_PREMIUM, INTERMEDIARY_CODE, ' +
+        'INTERMEDIARY_NAME, FIXED_COMMISSION_PERCENT, FIXED_COMMISSION_AMOUNT, TERRORISM_PREMIUM, ' +
+        'TERRORISM_COMMISSION_PERCENT, TERRORISM_COMMISSION_AMT, TOTAL_COMMISSION_AMOUNT, AGREEMENT_CODE, ' +
+        'MDM_CODE, COINSURANCE_STATUS_1, PAY_COMMISSION_TO_LEADER, POLICY_TYPE, License expiry date, ' +
+        'Registered/UnRegistered, From Location_ State( Intermediary Location), ' +
+        'To Location_ State(Servicing Branch ), Intermediary GSTN NO, SBIG GSTN NO, BookingBranch, ' +
+        'HSN Code, ALTERNATE_POLICY_NO, Remark, IRDA Product Code, IRDA Product Name, Channel Strucutre, ' +
+        'Statement Ref No, CHANNEL_TYPE, PROVISION_BATCH_ID, PROVISION_BATCH_DATE, NEW_RENEWAL_DWBI, ' +
+        'IMD_PAN_NO, IMD Full Name. ' +
+        'CRITICAL — co-insurance filter: check the PAY_COMMISSION_TO_LEADER column. ' +
+        'Include ONLY rows where PAY_COMMISSION_TO_LEADER indicates the broker is the leader (e.g. "Y", "YES", "Leader"). ' +
+        'Skip follower/co-insurance rows. ' +
+        'Mappings: policy_no = "POLICY_NO". ' +
+        'brokerage_amount = "TOTAL_COMMISSION_AMOUNT" (this is FIXED_COMMISSION_AMOUNT + TERRORISM_COMMISSION_AMT combined — use directly). ' +
+        'insured_name = "INSURED_NAME". premium_amount = "GROSS_PREMIUM". policy_date = "POLICY_ISSUE_DATE". ' +
+        'Skip rows where TOTAL_COMMISSION_AMOUNT is 0 or blank.',
+
       'KOTAK':
         'CSV file (comma-separated). Insurer is Zurich Kotak General Insurance (formerly Kotak General / Kotak Mahindra General). ' +
         'Columns confirmed from actual statement: BRANCH CODE, BRANCH NAME, ZKGI GST NO, POLICY NO, Endorsement No, ' +
@@ -1195,7 +1232,7 @@ function createGridTemplate(insurerId, productType) {
  * Usage: createAllGridTemplates()
  */
 function createAllGridTemplates() {
-  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI','KOTAK'];
+  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI','KOTAK','SBIG'];
   var productTypes = ['TW','Pvt Car','GCV','PCV','Tractor']; // Tractor → MiscD_26-27
 
   var total = 0, created = 0, skipped = 0;
@@ -1225,7 +1262,7 @@ function createAllGridTemplates() {
  * Usage: updateAllGridHeaders()
  */
 function updateAllGridHeaders() {
-  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI','KOTAK'];
+  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI','KOTAK','SBIG'];
   var productTypes = ['TW','Pvt Car','GCV','PCV','Tractor'];
   var prefixMap    = { 'TW':'TW','Pvt Car':'PC','GCV':'GCV','PCV':'PCV','Tractor':'MiscD','Construction Eqpt':'MiscD' };
 
@@ -1273,7 +1310,7 @@ function updateAllGridHeaders() {
  * Usage: validateAllGrids()
  */
 function validateAllGrids() {
-  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI','KOTAK'];
+  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI','KOTAK','SBIG'];
   var productTypes = ['TW','Pvt Car','GCV','PCV','Tractor'];
   var prefixMap    = { 'TW':'TW','Pvt Car':'PC','GCV':'GCV','PCV':'PCV','Tractor':'MiscD','Construction Eqpt':'MiscD' };
 

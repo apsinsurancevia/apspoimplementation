@@ -196,11 +196,11 @@ var STATEMENT_HEADERS_DATA = [
   [
     'OR', 'pdf', '', 1,
     'Policy No.',
-    'Comm. / Ref. Comm. (Rs.)',
-    'Premium / Ref. Premium (Rs.)',
+    'Comm. (Rs.) (Ref.)',
+    'Premium (Rs.) (Ref.)',
     'Insured Name',
     'Policy Expiry Date',
-    'OD+TP rows per policy_no — sum Comm and Premium across both rows; return one element per policy'
+    'PDF; header block and broker details block repeat on every page — ignore; footer (Department Total, Grand Total, Cumulative figures, Gross Payable, Net Payable) — ignore; each motor policy has TWO data rows (one OD, one TP — identified by Pol.Type column); sum Comm. (Rs.) (Ref.) and Premium (Rs.) (Ref.) across both rows per Policy No.'
   ],
   [
     'NIC', 'pdf', '', 1,
@@ -915,11 +915,19 @@ function seedDefaultPrompts() {
         'Skip rows where Brokerage is 0 or blank.',
 
       'OR':
-        'PDF statement, up to 27 pages. Each policy appears as TWO rows — one for OD (own damage) and one for TP (third party). ' +
-        'CRITICAL: Sum the two rows and return ONE element per policy_no. ' +
-        'policy_no = "Policy No.". brokerage_amount = SUM of "Comm. / Ref. Comm. (Rs.)" across both OD and TP rows for the same policy. ' +
-        'insured_name = "Insured Name". premium_amount = SUM of "Premium / Ref. Premium (Rs.)" across both rows. ' +
-        'policy_date = "Policy Expiry Date". Negative entries (endorsement reversals) are valid — include as-is.',
+        'PDF statement (Oriental Insurance), up to 27 pages. ' +
+        'IGNORE the following — they are not policy data rows: ' +
+        '(1) Header block repeated on every page: Report Generating Office, User ID, Run Date, Report, Page No., Bill No., Office, For Period. ' +
+        '(2) Broker details block repeated on every page: Name, Address, Broker Code, Licence No., PAN Number, Lic. Expiry Date, Process Date, I Tax Rate. ' +
+        '(3) Footer/summary block at the end: Department Total, Grand Total, Cumulative Gross Commission, Cumulative Income Tax, Gross Commission, Less: Income Tax for the Current Period (Including Surcharge), Gross Payable, Add: GST for the current period, Net Payable. ' +
+        'The data table has these exact column headers: Dept, Policy No., Insured Name, Colln. No., Prod. Code, Pol.Type, Cvr., Instl No., Policy Expiry Date, Bank Fin. Type Description, Premium (Rs.) (Ref.), Comm. (Rs.) (Ref.), Premium / Comm. Rate (%), Description, GST Exempt/Non-Exempt. ' +
+        'CRITICAL — OD and TP structure: each motor policy appears as TWO rows — one where Pol.Type indicates OD (own damage) and one where Pol.Type indicates TP (third party). ' +
+        'Sum both rows and return ONE element per Policy No. ' +
+        'policy_no = "Policy No.". ' +
+        'brokerage_amount = SUM of "Comm. (Rs.) (Ref.)" across the OD and TP rows for the same Policy No. ' +
+        'premium_amount = SUM of "Premium (Rs.) (Ref.)" across both rows. ' +
+        'insured_name = "Insured Name". policy_date = "Policy Expiry Date". ' +
+        'Negative entries (endorsement reversals) are valid — include as-is with the negative sign.',
 
       'TATA':
         'Excel file, sheet name "Report". ' +

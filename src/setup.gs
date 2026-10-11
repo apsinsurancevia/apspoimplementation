@@ -85,8 +85,12 @@ var INSURER_MASTER_DATA = [
   ['OR','The Oriental Insurance Company Limited','23AAACT0627R4Z4','MADHYA PRADESH','23','Ida Building, 4th Floor, 7, Race Course Road, Indore','997131','','Y'],
   ['USGI','Universal Sompo General Insurance Company Limited','23AAACU8917F1ZE','MADHYA PRADESH','23','M 12 to M 16, Part Commerce House, 7 Race Course Road, R.S. Bhandari Marg, Indore - 452001','997131','','Y'],
   ['KOTAK','Zurich Kotak General Insurance Company (India) Limited','07AAFCK7016C1ZV','DELHI','07','H 78, 23 Himalaya House, 7th Floor, KG Marg, New Delhi -110001','997131','','Y'],
-  ['UIIC','UNITED INDIA INSURANCE CO LTD','[GSTIN]','TAMILNADU','TN','[ADDRESS]','997131','','Y'],
-  ['BAJAJ','BAJAJ ALLIANZ GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','','Y']
+  ['BAJAJ','Bajaj General Insurance Limited','23AABCB5730G1Z5','MADHYA PRADESH','23','4th Floor, 409, Commerce House, 7 Race Course Road, Indore, Pin: 452001','997131','','Y'],
+  ['IFFCO','IFFCO-Tokio General Insurance Company Limited','23AAACI7573H1ZK','MADHYA PRADESH','23','2nd Floor, 214, Zone-1, Bhagwan Complex, MP Nagar, Bhopal, Pin: 462011','997131','','Y'],
+  ['KSHEMA','Kshema General Insurance Limited','36AAHCK1849H1ZD','TELANGANA','36','4th Floor, 413, My Home Tycoon Building, Kundan Bagh, Begumpet, Hyderabad, Pin: 500016','997131','','Y'],
+  ['ROYAL','Royal Sundaram General Insurance Co Ltd','23AABCR7106G1ZR','MADHYA PRADESH','23','3rd and 4th Floor, 11, Alankar Complex, Zone II, MP Nagar, Bhopal, Pin: 462011','997131','','Y'],
+  ['SHRIRAM','Shriram General Insurance Company Limited','23AAKCS2509K1ZB','MADHYA PRADESH','23','5th Floor, 502 and 503, Ashima Corporate Zone, Ashima The Lake City Mall, Hoshangabad Road, Bhopal, Pin: 462026','997131','','Y'],
+  ['UIIC','United India Insurance Company Limited','23AAACU5552C1ZR','MADHYA PRADESH','23','2, Second Block, Paryawas Bhawan, Jail Road, Arera Hills, Bhopal, Pin: 462011','997131','','Y']
 ];
 
 /**
@@ -111,6 +115,85 @@ function applyApsInsurerBuyers() {
   SpreadsheetApp.flush();
   Logger.log('applyApsInsurerBuyers: wrote ' + INSURER_MASTER_DATA.length + ' insurers');
   return { rows: INSURER_MASTER_DATA.length };
+}
+
+/**
+ * Appends grid insurers that are missing from the live Insurers tab.
+ * Does not rewrite existing rows (keeps GST and the SBI code already on the sheet).
+ * Safe to re-run. Returns { added: string[], skipped: string[], total: number }.
+ */
+function appendMissingGridInsurers() {
+  if (!CONFIG.SHEET_INSURER_MASTER) {
+    throw new Error('CONFIG.SHEET_INSURER_MASTER is blank');
+  }
+  var wanted = { BAJAJ: true, IFFCO: true, KSHEMA: true, ROYAL: true, SHRIRAM: true, UIIC: true };
+  var ss = SpreadsheetApp.openById(CONFIG.SHEET_INSURER_MASTER);
+  var sheet = ss.getSheetByName('Insurers') || ss.getSheets()[0];
+  if (sheet.getName() !== 'Insurers') sheet.setName('Insurers');
+
+  var last = sheet.getLastRow();
+  var existing = {};
+  if (last >= 2) {
+    var ids = sheet.getRange(2, 1, last - 1, 1).getValues();
+    ids.forEach(function(r) {
+      var id = String(r[0] || '').trim().toUpperCase();
+      if (id) existing[id] = true;
+    });
+  }
+
+  var toAdd = INSURER_MASTER_DATA.filter(function(row) {
+    var id = String(row[0] || '').trim().toUpperCase();
+    return wanted[id] && !existing[id];
+  });
+  if (toAdd.length) {
+    sheet.getRange(last + 1, 1, toAdd.length, toAdd[0].length).setValues(toAdd);
+    SpreadsheetApp.flush();
+  }
+  var skipped = Object.keys(wanted).filter(function(id) { return existing[id]; });
+  Logger.log('appendMissingGridInsurers: added ' + toAdd.length + ' skipped ' + skipped.length);
+  return {
+    added: toAdd.map(function(r) { return r[0]; }),
+    skipped: skipped,
+    total: last - 1 + toAdd.length
+  };
+}
+
+/**
+ * Writes GST name, GSTIN, state, and address for the six grid insurers
+ * onto matching live Insurer Master rows. Other insurers are left as-is.
+ * Safe to re-run. Returns { updated: string[] }.
+ */
+function fillGridInsurerGstDetails() {
+  var wanted = { BAJAJ: true, IFFCO: true, KSHEMA: true, ROYAL: true, SHRIRAM: true, UIIC: true };
+  var byId = {};
+  INSURER_MASTER_DATA.forEach(function(row) {
+    var id = String(row[0] || '').trim().toUpperCase();
+    if (wanted[id]) byId[id] = row;
+  });
+  var ss = SpreadsheetApp.openById(CONFIG.SHEET_INSURER_MASTER);
+  var sheet = ss.getSheetByName('Insurers') || ss.getSheets()[0];
+  var last = sheet.getLastRow();
+  if (last < 2) return { updated: [] };
+  var values = sheet.getRange(2, 1, last - 1, 9).getValues();
+  var updated = [];
+  for (var i = 0; i < values.length; i++) {
+    var id = String(values[i][0] || '').trim().toUpperCase();
+    var src = byId[id];
+    if (!src) continue;
+    values[i][1] = src[1];
+    values[i][2] = src[2];
+    values[i][3] = src[3];
+    values[i][4] = src[4];
+    values[i][5] = src[5];
+    if (!String(values[i][6] || '').trim()) values[i][6] = src[6];
+    updated.push(id);
+  }
+  if (updated.length) {
+    sheet.getRange(2, 1, values.length, 9).setValues(values);
+    SpreadsheetApp.flush();
+  }
+  Logger.log('fillGridInsurerGstDetails: updated ' + updated.join(','));
+  return { updated: updated };
 }
 
 /**
@@ -2138,6 +2221,14 @@ function normalizeGridImportRows_(rows) {
         row[i] = Math.round(n * 10000) / 100;
       }
     });
+
+    // If PO blank but PI present, copy PI → PO (extract often only fills pi_rate)
+    var piNum = parseFloat(row[36]);
+    var poNum = parseFloat(row[42]);
+    if (!isNaN(piNum) && piNum > 0 && (row[42] === '' || row[42] === null || isNaN(poNum) || poNum === 0)) {
+      row[42] = piNum;
+      if (!row[43]) row[43] = row[37] || 'NET';
+    }
 
     if (row[25]) {
       var cleaned = String(row[25]).replace(/\([^)]*\)/g, '');

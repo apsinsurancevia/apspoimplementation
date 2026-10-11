@@ -27,6 +27,18 @@ function doGet(e) {
     if (action === 'updateinsurers') {
       return handleUpdateInsurersRequest_(e);
     }
+    if (action === 'appendinsurers') {
+      return handleAppendInsurersRequest_(e);
+    }
+    if (action === 'refreshinsurerstatus') {
+      return handleRefreshInsurerStatusRequest_(e);
+    }
+    if (action === 'backfillporate') {
+      return handleBackfillPoRateRequest_(e);
+    }
+    if (action === 'fillinsurers') {
+      return handleFillInsurersRequest_(e);
+    }
     if (action === 'importrto') {
       return handleImportRtoRequest_(e);
     }
@@ -259,6 +271,108 @@ function handleSeedPartnersRequest_(e) {
   } catch (err) {
     return jsonOut_({ success: false, error: err.message });
   }
+}
+
+/** Fill GST details for grid insurers already on Insurer Master. ?action=fillInsurers&key=... */
+function handleFillInsurersRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) {
+    return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  }
+  try {
+    var result = fillGridInsurerGstDetails();
+    return jsonOut_({ success: true, insurers: result });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/** Append grid insurers missing from Insurer Master. ?action=appendInsurers&key=... */
+function handleAppendInsurersRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) {
+    return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  }
+  try {
+    var result = appendMissingGridInsurers();
+    return jsonOut_({ success: true, insurers: result });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/** ?action=refreshInsurerStatus&key=... */
+function handleRefreshInsurerStatusRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    return jsonOut_({ success: true, status: refreshInsurerStatus() });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/**
+ * ?action=backfillPoRate&key=...&insurerId=BAJAJ
+ * Copies pi_rate → po_rate on live grid tabs where PO is blank.
+ */
+function handleBackfillPoRateRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    var insurerId = (e.parameter && e.parameter.insurerId) || '';
+    return jsonOut_({ success: true, result: backfillPoRateFromPi_(insurerId) });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/** Backfill blank po_rate from pi_rate for one insurer or all grid sheets. */
+function backfillPoRateFromPi_(insurerId) {
+  var summary = [];
+  var folder = DriveApp.getFolderById(CONFIG.FOLDER_GRIDS);
+  var files = folder.getFiles();
+  var filter = (insurerId || '').toString().trim().toUpperCase();
+
+  while (files.hasNext()) {
+    var file = files.next();
+    var name = file.getName();
+    if (name.toLowerCase().indexOf('grid') === -1) continue;
+    if (filter && name.toUpperCase().indexOf(filter) === -1) continue;
+
+    var ss = SpreadsheetApp.openById(file.getId());
+    var tabsTouched = 0, cells = 0;
+    ss.getSheets().forEach(function(sheet) {
+      if (!/^[A-Za-z]+_\d{2}-\d{2}$/.test(sheet.getName())) return;
+      var last = sheet.getLastRow();
+      if (last < 2) return;
+      var width = Math.min(64, sheet.getLastColumn());
+      var data = sheet.getRange(2, 1, last - 1, width).getValues();
+      var changed = false;
+      for (var r = 0; r < data.length; r++) {
+        while (data[r].length < 64) data[r].push('');
+        var pi = parseFloat(data[r][36]);
+        var po = parseFloat(data[r][42]);
+        if (!isNaN(pi) && pi > 0 && (data[r][42] === '' || data[r][42] === null || isNaN(po) || po === 0)) {
+          data[r][42] = pi;
+          if (!data[r][43]) data[r][43] = data[r][37] || 'NET';
+          cells++;
+          changed = true;
+        }
+      }
+      if (changed) {
+        sheet.getRange(2, 1, data.length, 64).setValues(data.map(function(row) { return row.slice(0, 64); }));
+        tabsTouched++;
+      }
+    });
+    if (tabsTouched) summary.push({ file: name, tabs: tabsTouched, cells: cells });
+  }
+  SpreadsheetApp.flush();
+  return { filesUpdated: summary.length, details: summary };
 }
 
 /** Replace Insurer Master rows with APS buyer GST details. ?action=updateInsurers&key=... */
@@ -1062,23 +1176,26 @@ function findInsurerGridSheet(insurerId) {
     var id = (insurerId || '').toString().trim();
     if (!id) throw new Error('insurerId is blank');
 
-    // 1. Prefer Insurer Master name → "[name] Grid"
+    // Prefer sheets that already have rate rows (import often creates "[CODE] Grid")
+    var candidates = [];
+
+    // 1. Exact "[CODE] Grid"
+    var byCode = findFileInFolder(CONFIG.FOLDER_GRIDS, id + ' Grid');
+    if (byCode) candidates.push(byCode);
+
+    // 2. Insurer Master name → "[name] Grid"
     try {
       var insurers = getSheetDataAsObjects(CONFIG.SHEET_INSURER_MASTER, 'Insurers');
       for (var i = 0; i < insurers.length; i++) {
-        if (insurers[i].insurer_id === id) {
+        if (String(insurers[i].insurer_id || '').trim() === id) {
           var byName = findFileInFolder(CONFIG.FOLDER_GRIDS, insurers[i].insurer_name + ' Grid');
-          if (byName) return byName;
+          if (byName && candidates.indexOf(byName) === -1) candidates.push(byName);
           break;
         }
       }
     } catch (masterErr) {
       Logger.log('findInsurerGridSheet: master lookup skipped — ' + masterErr.message);
     }
-
-    // 2. Exact "[CODE] Grid" (import creates this for non-master insurers)
-    var byCode = findFileInFolder(CONFIG.FOLDER_GRIDS, id + ' Grid');
-    if (byCode) return byCode;
 
     // 3. Scan Grids folder for any file name containing the code
     var folder = DriveApp.getFolderById(CONFIG.FOLDER_GRIDS);
@@ -1088,10 +1205,28 @@ function findInsurerGridSheet(insurerId) {
       var f = files.next();
       var n = f.getName().toLowerCase();
       if (n.indexOf(codeLower) !== -1 && n.indexOf('grid') !== -1) {
-        return f.getId();
+        if (candidates.indexOf(f.getId()) === -1) candidates.push(f.getId());
       }
     }
-    return null;
+
+    if (!candidates.length) return null;
+
+    // Pick first candidate that has any product tab with data rows
+    for (var c = 0; c < candidates.length; c++) {
+      try {
+        var ss = SpreadsheetApp.openById(candidates[c]);
+        var tabs = ss.getSheets();
+        for (var t = 0; t < tabs.length; t++) {
+          var tn = tabs[t].getName();
+          if (/^[A-Za-z]+_\d{2}-\d{2}$/.test(tn) && tabs[t].getLastRow() > 1) {
+            return candidates[c];
+          }
+        }
+      } catch (openErr) {
+        Logger.log('findInsurerGridSheet: skip ' + candidates[c] + ' — ' + openErr.message);
+      }
+    }
+    return candidates[0];
   } catch (e) {
     throw new Error('findInsurerGridSheet failed [' + insurerId + ']: ' + e.message);
   }

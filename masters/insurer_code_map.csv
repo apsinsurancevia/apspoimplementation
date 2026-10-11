@@ -23,16 +23,29 @@ GO DIGIT,GO,Uppercase variant
 INDUSIND,INDUSIND,Direct match
 IND,INDUSIND,Rate card short label
 IndusInd,INDUSIND,Mixed case variant
+Reliance General,INDUSIND,Former name — rebranded to IndusInd
+RELIANCE GENERAL,INDUSIND,Former name uppercase
+Reliance General Insurance,INDUSIND,Former full name
+RGICL,INDUSIND,Former rate card code
 NIA,NIA,Direct match
 NEW INDIA,NIA,Alternate label
 New India,NIA,Short name variant
 ICICI,ICICI,Direct match
-ICICI LOMBARD,ICICI,Full name variant
-ICICI Lombard,ICICI,Mixed case variant
-SBI,SBI,Direct match
-SBI GENERAL,SBI,Alternate label
-SBI General,SBI,Mixed case variant
+ICICI Lombard,ICICI,Short name variant
+ICICI LOMBARD,ICICI,Uppercase variant
+IL,ICICI,Rate card short label
 KOTAK,KOTAK,Direct match
-ZURICH KOTAK,KOTAK,Full name variant
-Zurich Kotak,KOTAK,Mixed case variant
 Kotak,KOTAK,Short name variant
+Kotak General,KOTAK,Short name variant
+KOTAK GENERAL,KOTAK,Uppercase variant
+Kotak Mahindra General,KOTAK,Former full name variant
+Zurich Kotak,KOTAK,Current rebranded name
+ZURICH KOTAK,KOTAK,Current rebranded uppercase
+Zurich Kotak General Insurance,KOTAK,Current full name
+ZKGI,KOTAK,GST / rate card abbreviation
+SBIG,SBIG,Direct match
+SBI,SBIG,APS short code → SBIG
+SBI General,SBIG,Short name variant
+SBI GENERAL,SBIG,Uppercase variant
+SBI General Insurance,SBIG,Full name variant
+SBI GENERAL INSURANCE,SBIG,Full name uppercase

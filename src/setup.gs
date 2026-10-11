@@ -139,6 +139,10 @@ var INSURER_CODE_MAP_DATA = [
   ['INDUSIND','INDUSIND','Direct match'],
   ['IND','INDUSIND','Rate card short label'],
   ['IndusInd','INDUSIND','Mixed case variant'],
+  ['Reliance General','INDUSIND','Former name — rebranded to IndusInd'],
+  ['RELIANCE GENERAL','INDUSIND','Former name uppercase'],
+  ['Reliance General Insurance','INDUSIND','Former full name'],
+  ['RGICL','INDUSIND','Former rate card code'],
   ['NIA','NIA','Direct match'],
   ['NEW INDIA','NIA','Alternate label'],
   ['New India','NIA','Short name variant'],
@@ -245,12 +249,12 @@ var STATEMENT_HEADERS_DATA = [
   ],
   [
     'INDUSIND', 'xlsx', '', 1,
-    '',
-    '',
-    '',
-    '',
-    '',
-    'Format unknown — pending actual statement file; update this row once received'
+    'PolicyNumber',
+    'FinalIRDAComm+RewardCommission+FinalTPComm+FinalTerrorismComm',
+    'NET_PREMIUM',
+    'InsuredName',
+    'Month',
+    'No pre-summed total column — brokerage = FinalIRDAComm + RewardCommission + FinalTPComm + FinalTerrorismComm; formerly Reliance General Insurance'
   ],
   [
     'NIA', 'pdf', '', 1,
@@ -908,8 +912,19 @@ function seedDefaultPrompts() {
         'insured_name = "customer_Name". premium_amount = "net_Premium". policy_date = "policy_Issue_Date".',
 
       'INDUSIND':
-        'IndusInd General Insurance statement — column names to be confirmed from the actual statement file. ' +
-        'Use the generic extraction rules above.',
+        'IndusInd General Insurance statement (formerly Reliance General Insurance — same insurer, rebranded). ' +
+        'Excel file. ' +
+        'Columns confirmed from actual statement: Month, TransactionId, RegionName, BranchCode, BranchName, ' +
+        'ProductCode, PolicyNumber, Endorsement, InsuredName, AgentCode, AgentName, AgentType, Discount, ' +
+        'PremiumAmount, FinalIRDA, FinalIRDAComm, Reward, RewardCommission, TPPremiumAmount, FinalTP, ' +
+        'FinalTPComm, TerrorismPremiumAmount, FinalTerrorism, FinalTerrorismComm, ChannelName, IRDAReqRefNo, ' +
+        'RewardReqRefNo, TerrorismReqRefNo, TPReqRefNo, SkippedcovernoteY_N, POSPortalOSY_N, POLICY_COUNT, ' +
+        'NoofLivesCovered, SUM_INSURED, NET_PREMIUM, CoverNoteNumber, CoinType, StateCode, StateName, Statement Month. ' +
+        'CRITICAL — there is no pre-summed total commission column. ' +
+        'brokerage_amount = FinalIRDAComm + RewardCommission + FinalTPComm + FinalTerrorismComm (sum all four). ' +
+        'Skip rows where all four commission columns are 0 or blank. ' +
+        'Mappings: policy_no = "PolicyNumber". ' +
+        'insured_name = "InsuredName". premium_amount = "NET_PREMIUM". policy_date = "Month".',
 
       'ICICI':
         'CSV file (comma-separated). ' +

@@ -233,7 +233,7 @@ var STATEMENT_HEADERS_DATA = [
     'net_Premium',
     'customer_Name',
     'policy_Issue_Date',
-    'Two sheets: MOTOR and NON-MOTOR — header row is row 2 on both; combine and extract from both'
+    'Two sheets MOTOR + NON-MOTOR — header row is row 2; total_amount is final aggregate (after final_grid_payable + Total Instant Commission); customer_Name appears twice in headers (duplicate column — use first); co_Insurance_Type present — skip follower/co-insurance rows'
   ],
   [
     'TATA', 'xlsx', 'Report', 1,
@@ -990,10 +990,27 @@ function seedDefaultPrompts() {
         'Skip rows where Comm Amt is 0 or blank.',
 
       'USGI':
-        'Excel file with two sheets: "MOTOR" and "NON-MOTOR". Both sheets have one blank row above the header (header is row 2). ' +
+        'Excel file (Universal Sompo General Insurance). Two sheets: "MOTOR" and "NON-MOTOR". ' +
+        'Both sheets have one blank row above the header — header is row 2, data starts row 3. ' +
         'Extract from both sheets and combine. ' +
-        'policy_no = "policyNo". brokerage_amount = "total_amount". ' +
-        'insured_name = "customer_Name". premium_amount = "net_Premium". policy_date = "policy_Issue_Date".',
+        'Columns confirmed from actual statement (130+ cols, key ones): line_Of_Business, channel_Details, ' +
+        'policy_Issue_Month_Year, intermediary_Code, policyNo, endorsementNo, final_Policy_No, ' +
+        'customer_Name, policy_Issue_Date, policy_start_date, policy_end_date, policy_issuance_state, ' +
+        'vehicle_make, vehicle_model, yr_Of_Manufacturing, policyType, productName, product_Name, ' +
+        'gvw, policy_Status, rtoLocation, rtoState, businessType, usgiNetPremium, netOdPremium, ' +
+        'num_Net_Tp_Premium, terrorism_Premium, net_Premium, fuel_Type, motor_Registration_No, ' +
+        'co_Insurance_Type, gwp, final_gwp, grid_percentage, irda_od_perc, irda_tp_perc, ' +
+        'irdai_amount_on_OD, irdai_amount_on_TP, total_irdai_amount, ' +
+        'Instant Commission on OD, Instant Commission on TP, Total Instant Commission, ' +
+        'final_grid_payable_on_OD, final_grid_payable_on_TP, final_grid_payable, total_amount, ' +
+        'Remark for Finance. ' +
+        'NOTE: customer_Name appears twice in the header row (duplicate column in their export) — use the first occurrence. ' +
+        'FILTER — co-insurance: check co_Insurance_Type; skip rows where this indicates follower status. ' +
+        'Mappings: policy_no = "policyNo". ' +
+        'brokerage_amount = "total_amount" (this is the final aggregate commission — final_grid_payable + Total Instant Commission combined). ' +
+        'insured_name = "customer_Name" (first occurrence). premium_amount = "net_Premium". ' +
+        'policy_date = "policy_Issue_Date". ' +
+        'Skip rows where total_amount is 0 or blank.',
 
       'INDUSIND':
         'IndusInd General Insurance statement (formerly Reliance General Insurance — same insurer, rebranded). ' +

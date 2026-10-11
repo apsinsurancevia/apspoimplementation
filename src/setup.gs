@@ -769,6 +769,153 @@ function writeConfigIds(jsonString) {
   }
 }
 
+// ── INSURER STATUS REFRESH ────────────────────────────────────────────────────
+
+/**
+ * Auto-refreshes the Insurer_Status tab by checking live data.
+ * Run from Apps Script editor any time — safe to re-run repeatedly.
+ *
+ * data_configured  — checks Insurer Master: Y if GSTIN + address + SPOC email
+ *                    all filled (no [placeholder] values); Partial if some filled
+ * grid_configured  — checks Grids Drive folder: Y if file exists and has data
+ *                    rows; Partial if file exists but empty
+ * statement_configured — checks Statement_Headers tab: Y if policy_no_col is
+ *                    non-blank; Pending if blank
+ */
+function refreshInsurerStatus() {
+  return wrapWithErrorHandling('refreshInsurerStatus', function() {
+
+    var configSS    = SpreadsheetApp.openById(CONFIG.SHEET_BROKER_CONFIG);
+    var statusSheet = configSS.getSheetByName('Insurer_Status');
+    if (!statusSheet) throw new Error('Insurer_Status tab not found. Run runSetup() first.');
+
+    // ── Load reference data ───────────────────────────────────────────────────
+
+    // Insurer Master rows (for data_configured check)
+    var insurerMasterRows = getSheetDataAsObjects(CONFIG.SHEET_INSURER_MASTER, 'Insurers');
+    var insurerMasterMap  = {};
+    insurerMasterRows.forEach(function(ins) {
+      if (ins.insurer_id) insurerMasterMap[ins.insurer_id] = ins;
+    });
+
+    // Statement_Headers rows (for statement_configured check)
+    var stmtData = configSS.getSheetByName('Statement_Headers');
+    var stmtMap  = {};
+    if (stmtData) {
+      var stmtRows = stmtData.getDataRange().getValues();
+      for (var s = 1; s < stmtRows.length; s++) {
+        var sid = (stmtRows[s][0] || '').toString().trim();
+        if (sid) stmtMap[sid] = stmtRows[s]; // [policy_no_col] is index 4
+      }
+    }
+
+    // ── Iterate status rows ───────────────────────────────────────────────────
+
+    var statusData = statusSheet.getDataRange().getValues();
+    var today      = Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd-MM-yyyy');
+    var updated    = 0;
+
+    for (var i = 1; i < statusData.length; i++) {
+      var insurerId = (statusData[i][0] || '').toString().trim();
+      if (!insurerId) continue;
+
+      // ── 1. data_configured ─────────────────────────────────────────────────
+      var dataStatus = 'N';
+      var ins        = insurerMasterMap[insurerId];
+      if (ins) {
+        var vals    = [ins.insurer_gstin, ins.insurer_address, ins.spoc_email];
+        var filled  = vals.filter(function(v) {
+          var s = (v || '').toString().trim();
+          return s !== '' && s.indexOf('[') === -1;
+        }).length;
+        if      (filled === 3) dataStatus = 'Y';
+        else if (filled > 0)   dataStatus = 'Partial';
+      }
+
+      // ── 2. grid_configured ─────────────────────────────────────────────────
+      var gridStatus = checkGridConfigured_(insurerId);
+
+      // ── 3. statement_configured ────────────────────────────────────────────
+      var stmtStatus = 'N';
+      var stmtRow    = stmtMap[insurerId];
+      if (stmtRow) {
+        var policyNoCol = (stmtRow[4] || '').toString().trim();
+        stmtStatus = (policyNoCol && policyNoCol.indexOf('[') === -1)
+          ? 'Y'
+          : 'Pending';
+      }
+
+      // ── Write back ─────────────────────────────────────────────────────────
+      statusSheet.getRange(i + 1, 3).setValue(dataStatus);
+      statusSheet.getRange(i + 1, 4).setValue(gridStatus);
+      statusSheet.getRange(i + 1, 5).setValue(stmtStatus);
+      statusSheet.getRange(i + 1, 7).setValue(today);
+      updated++;
+    }
+
+    SpreadsheetApp.flush();
+    Logger.log('refreshInsurerStatus: updated ' + updated + ' rows');
+    return { updated: updated };
+
+  }, 'MANUAL');
+}
+
+/**
+ * Checks whether a grid file exists in FOLDER_GRIDS and has data rows.
+ * Returns 'Y', 'Partial' (file exists but no data rows), or 'N' (no file).
+ *
+ * @param {string} insurerId
+ * @returns {string} 'Y' | 'Partial' | 'N'
+ */
+function checkGridConfigured_(insurerId) {
+  try {
+    if (!CONFIG.FOLDER_GRIDS) return 'N';
+
+    // Find insurer name from INSURER_MASTER_DATA
+    var insurerName = '';
+    for (var i = 0; i < INSURER_MASTER_DATA.length; i++) {
+      if (INSURER_MASTER_DATA[i][0] === insurerId) {
+        insurerName = INSURER_MASTER_DATA[i][1];
+        break;
+      }
+    }
+    if (!insurerName) return 'N';
+
+    var gridsFolder = DriveApp.getFolderById(CONFIG.FOLDER_GRIDS);
+
+    // Try exact name first, then partial scan
+    var gridFile = null;
+    var exact = gridsFolder.getFilesByName(insurerName + ' Grid');
+    if (exact.hasNext()) {
+      gridFile = exact.next();
+    } else {
+      var all = gridsFolder.getFiles();
+      var idLower = insurerId.toLowerCase();
+      while (all.hasNext()) {
+        var f = all.next();
+        if (f.getName().toLowerCase().indexOf(idLower) !== -1) {
+          gridFile = f;
+          break;
+        }
+      }
+    }
+
+    if (!gridFile) return 'N';
+
+    // File found — check any tab for data rows
+    var ss     = SpreadsheetApp.open(gridFile);
+    var sheets = ss.getSheets();
+    for (var j = 0; j < sheets.length; j++) {
+      if (sheets[j].getLastRow() > 1) return 'Y';
+    }
+    return 'Partial'; // file exists but all tabs are header-only
+
+  } catch (e) {
+    Logger.log('checkGridConfigured_ [' + insurerId + ']: ' + e.message);
+    return 'N';
+  }
+}
+
 // ── RTO MASTER IMPORTER ───────────────────────────────────────────────────────
 
 /**

@@ -36,6 +36,9 @@ function doGet(e) {
     if (action === 'backfillporate') {
       return handleBackfillPoRateRequest_(e);
     }
+    if (action === 'extendgriddates') {
+      return handleExtendGridDatesRequest_(e);
+    }
     if (action === 'wipegriddata') {
       return handleWipeGridDataRequest_(e);
     }
@@ -350,6 +353,98 @@ function handleBackfillPoRateRequest_(e) {
   } catch (err) {
     return jsonOut_({ success: false, error: err.message });
   }
+}
+
+/**
+ * ?action=extendGridDates&key=...&to=31-03-2027&insurerId=ROYAL
+ * Extends effective_to_date (and blank from → 01-04-2026) on FY product tabs
+ * so Sep-only extract windows don't NO_MATCH mid-year lookups.
+ */
+function handleExtendGridDatesRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    var toDate = (e.parameter && e.parameter.to) || '31-03-2027';
+    var insurerId = (e.parameter && e.parameter.insurerId) || '';
+    return jsonOut_({ success: true, result: extendProductGridDates_(toDate, insurerId) });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+function extendProductGridDates_(toDate, insurerId) {
+  var targetTo = (toDate || '31-03-2027').toString().trim();
+  var defaultFrom = '01-04-2026';
+  var filter = (insurerId || '').toString().trim().toUpperCase();
+  var folder = DriveApp.getFolderById(CONFIG.FOLDER_GRIDS);
+  var files = folder.getFiles();
+  var summary = [];
+
+  while (files.hasNext()) {
+    var file = files.next();
+    var name = file.getName();
+    if (name.toLowerCase().indexOf('grid') === -1) continue;
+    if (filter && name.toUpperCase().indexOf(filter) === -1) continue;
+
+    var ss = SpreadsheetApp.openById(file.getId());
+    var cells = 0;
+    var tabs = 0;
+    ss.getSheets().forEach(function(sheet) {
+      if (!/^[A-Za-z ]+_\d{2}-\d{2}$/.test(sheet.getName())) return;
+      var last = sheet.getLastRow();
+      if (last < 2) return;
+      var width = Math.min(64, sheet.getLastColumn());
+      var data = sheet.getRange(2, 1, last - 1, width).getValues();
+      var changed = false;
+      for (var r = 0; r < data.length; r++) {
+        while (data[r].length < 64) data[r].push('');
+        var fromVal = data[r][7];
+        var toVal = data[r][8];
+        if (!fromVal) {
+          data[r][7] = defaultFrom;
+          cells++;
+          changed = true;
+        }
+        if (!toVal || String(toVal).trim() === '' || _opsDateBefore_(toVal, targetTo)) {
+          data[r][8] = targetTo;
+          cells++;
+          changed = true;
+        }
+        var pi = parseFloat(data[r][36]);
+        var po = parseFloat(data[r][42]);
+        if (!isNaN(pi) && pi > 0 && (data[r][42] === '' || data[r][42] === null || isNaN(po) || po === 0)) {
+          data[r][42] = pi;
+          if (!data[r][43]) data[r][43] = data[r][37] || 'NET';
+          cells++;
+          changed = true;
+        }
+      }
+      if (changed) {
+        sheet.getRange(2, 1, data.length, 64).setValues(data.map(function(row) { return row.slice(0, 64); }));
+        tabs++;
+      }
+    });
+    if (tabs) summary.push({ file: name, tabs: tabs, cells: cells });
+  }
+  SpreadsheetApp.flush();
+  return { filesUpdated: summary.length, toDate: targetTo, details: summary };
+}
+
+/** Compare DD-MM-YYYY / Date loosely — true if a is strictly before b. */
+function _opsDateBefore_(a, b) {
+  function parse(v) {
+    if (v instanceof Date) return v.getTime();
+    var s = String(v || '').trim();
+    var m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+    if (m) return new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10)).getTime();
+    var t = Date.parse(s);
+    return isNaN(t) ? null : t;
+  }
+  var ta = parse(a);
+  var tb = parse(b);
+  if (ta === null || tb === null) return true;
+  return ta < tb;
 }
 
 /** ?action=wipeGridData&key=... — clear data rows on all FY product tabs in Grids folder */

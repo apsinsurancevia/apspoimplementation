@@ -82,7 +82,8 @@ var INSURER_MASTER_DATA = [
   ['BAJAJ','BAJAJ ALLIANZ GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
   ['GO','GO DIGIT GENERAL INSURANCE LTD','[GSTIN]','KARNATAKA','KA','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
   ['INDUSIND','INDUSIND GENERAL INSURANCE CO LTD','[GSTIN]','[STATE]','[CODE]','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
-  ['NIA','THE NEW INDIA ASSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y']
+  ['NIA','THE NEW INDIA ASSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
+  ['ICICI','ICICI LOMBARD GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y']
 ];
 
 // ── FIELD MAPPING SEED DATA ───────────────────────────────────────────────────
@@ -140,7 +141,11 @@ var INSURER_CODE_MAP_DATA = [
   ['IndusInd','INDUSIND','Mixed case variant'],
   ['NIA','NIA','Direct match'],
   ['NEW INDIA','NIA','Alternate label'],
-  ['New India','NIA','Short name variant']
+  ['New India','NIA','Short name variant'],
+  ['ICICI','ICICI','Direct match'],
+  ['ICICI Lombard','ICICI','Short name variant'],
+  ['ICICI LOMBARD','ICICI','Uppercase variant'],
+  ['IL','ICICI','Rate card short label']
 ];
 
 // ── PRODUCT MAP SEED DATA ─────────────────────────────────────────────────────
@@ -255,6 +260,15 @@ var STATEMENT_HEADERS_DATA = [
     'Insured Name',
     'Policy Inception Date',
     'Extract from Policy Detail section only; ignore Tax Summary section'
+  ],
+  [
+    'ICICI', 'csv', '', 1,
+    'POLICY_NUMBER',
+    'ACTUAL_COMMISSION',
+    'GWP',
+    'INSURED_CUSTOMER_NAME',
+    'POLICY_START_DATE',
+    'CSV format; filter TRANSACTION_STATUS — skip reversed/cancelled rows; ACTUAL_COMMISSION includes both OD (ACTUAL_COMPR_OD_COMM) and TP (ACTUAL_COMPR_TP_COMM) components'
   ]
 ];
 
@@ -895,7 +909,29 @@ function seedDefaultPrompts() {
 
       'INDUSIND':
         'IndusInd General Insurance statement — column names to be confirmed from the actual statement file. ' +
-        'Use the generic extraction rules above.'
+        'Use the generic extraction rules above.',
+
+      'ICICI':
+        'CSV file (comma-separated). ' +
+        'Columns confirmed from actual statement: AGENT_CATEGORY_NAME, AGENT_LICENSE_CODE, INTERMEDIARY_CODE, ' +
+        'INTERMEDIARY_NAME, LOCATION_NAME, CUSTOMER_ID, INSURED_CUSTOMER_NAME, PRODUCT_CODE, PRODUCT_NAME, ' +
+        'POLICY_NUMBER, POL_NUM_TXT, POL_PRI_VVERTICAL_DESC, POL_PRI_SSUB_VERTICAL_DESC, DEAL_CODE, ' +
+        'POL_RM_CODE, POL_RM_NAME, APPLICABLE_PREMIUM_AMOUNT, PREMIUM_FOR_PAYOUTS, POL_COMMISSION_PERCENTAGE, ' +
+        'COMMISSION_RATE_USED, ACTUAL_COMPR_OD_COMM, ACTUAL_COMPR_TP_COMM, ACTUAL_COMMISSION, ' +
+        'POLICY_START_DATE, POLICY_END_DATE, ENDORSEMENT_NUMBER, ENDORSEMENT_TYPE, LEADER_FOLLOWER, ' +
+        'CHILD_INTERMEDIARY_ID, CHILD_INTEREDIARY_NAME, COMMISSIONABLE_SOURCE, PAYMENT_LOCATION, ' +
+        'BRANCH_NAME, BASIC_PREMIUM_AMOUNT, EARTHQUAKE_PREMIUM_AMOUNT, MOTOR_OD_PREMIUM_AMOUNT, ' +
+        'MOTOR_TP_PREMIUM_AMOUNT, TERRORISM_PREMIUM_AMOUNT, WAR_SRCC_PREMIUM_AMT, PREMIUM_AMOUNT_USED, ' +
+        'BUSINESS_TYPE, IRDA_REPORTING_DATE, GWP, FROM_LOCATION, TO_LOCATION, POL_VEHICLE_AGE, ' +
+        'CUST_TYPE, TRANSACTION_STATUS, YEAR_FLAG, PAYOUT_CYCLE, PAY_ON, MATCH_TYPE, CALCULATION_TYPE, ' +
+        'STD_REMARKS, TRANSACTION_ID, TOTAL_OD_PREMIUM_RECEIVED, TOTAL_TP_PREMIUM_RECEIVED, ' +
+        'TOTAL_PREMIUM_RECEIVED, DMA_CODE, BRANCH_STATE, OFFLINE_POL_NUM_TXT, BANCS_POL_NUM, GST_EXCEMPTION_FLAG. ' +
+        'CRITICAL — filter by TRANSACTION_STATUS: include ONLY rows where TRANSACTION_STATUS is not blank ' +
+        'and does not indicate a reversal or cancellation (exclude values like "REVERSED", "CANCELLED", "VOID"). ' +
+        'Mappings: policy_no = "POLICY_NUMBER". brokerage_amount = "ACTUAL_COMMISSION" (this is the total ' +
+        'commission; includes OD component ACTUAL_COMPR_OD_COMM + TP component ACTUAL_COMPR_TP_COMM). ' +
+        'insured_name = "INSURED_CUSTOMER_NAME". premium_amount = "GWP". policy_date = "POLICY_START_DATE". ' +
+        'Skip rows where ACTUAL_COMMISSION is 0 or blank.'
     };
 
     var ss    = SpreadsheetApp.openById(CONFIG.SHEET_BROKER_CONFIG);
@@ -1086,7 +1122,7 @@ function createGridTemplate(insurerId, productType) {
  * Usage: createAllGridTemplates()
  */
 function createAllGridTemplates() {
-  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND'];
+  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI'];
   var productTypes = ['TW','Pvt Car','GCV','PCV','Tractor']; // Tractor → MiscD_26-27
 
   var total = 0, created = 0, skipped = 0;
@@ -1116,7 +1152,7 @@ function createAllGridTemplates() {
  * Usage: updateAllGridHeaders()
  */
 function updateAllGridHeaders() {
-  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND'];
+  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI'];
   var productTypes = ['TW','Pvt Car','GCV','PCV','Tractor'];
   var prefixMap    = { 'TW':'TW','Pvt Car':'PC','GCV':'GCV','PCV':'PCV','Tractor':'MiscD','Construction Eqpt':'MiscD' };
 
@@ -1164,7 +1200,7 @@ function updateAllGridHeaders() {
  * Usage: validateAllGrids()
  */
 function validateAllGrids() {
-  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND'];
+  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI'];
   var productTypes = ['TW','Pvt Car','GCV','PCV','Tractor'];
   var prefixMap    = { 'TW':'TW','Pvt Car':'PC','GCV':'GCV','PCV':'PCV','Tractor':'MiscD','Construction Eqpt':'MiscD' };
 

@@ -272,7 +272,7 @@ var STATEMENT_HEADERS_DATA = [
     'Premium',
     'Insured Name',
     'Policy Inception Date',
-    'Extract from Policy Detail section only; ignore Tax Summary section'
+    'PDF has two tables: (1) Policy-level detail — extract this; (2) Tax summary — ignore entirely; header block (Broker Code/Name/License/GSTIN) is also irrelevant'
   ],
   [
     'ICICI', 'csv', '', 1,
@@ -902,9 +902,17 @@ function seedDefaultPrompts() {
         'Skip rows where Commission Amount is 0 or blank.',
 
       'NIA':
-        'PDF statement, two sections: "Policy Detail" and "Tax Summary". Extract from Policy Detail only. ' +
-        'policy_no = "Policy Number". brokerage_amount = "Brokerage". ' +
-        'insured_name = "Insured Name". premium_amount = "Premium". policy_date = "Policy Inception Date".',
+        'PDF statement. The PDF contains: a header block (Broker Code, Broker Name, Broker License Number, ' +
+        'Broker License Expiry Date, Broker GSTIN) — ignore entirely. ' +
+        'Data table 1 — Policy-level detail — has these exact column headers: Invoice Number, Invoice Date, ' +
+        'Office Code, Policy Number, Endorsement Number, LOB Code, Insured Name, Insured Type, Policy Month, ' +
+        'Policy Inception Date, Policy Expiry Date, Brokerage Percentage, Premium, Brokerage. ' +
+        'Data table 2 — Tax summary — has columns: Invoice Number, Invoice Date, Taxable Amount, CGST Input, ' +
+        'SGST Input, IGST Input, CGST RCM, SGST RCM, IGST RCM, Invoice Amount. ' +
+        'CRITICAL: extract ONLY from Data table 1 (Policy-level detail). Ignore Data table 2 entirely. ' +
+        'Mappings: policy_no = "Policy Number". brokerage_amount = "Brokerage". ' +
+        'insured_name = "Insured Name". premium_amount = "Premium". policy_date = "Policy Inception Date". ' +
+        'Skip rows where Brokerage is 0 or blank.',
 
       'OR':
         'PDF statement, up to 27 pages. Each policy appears as TWO rows — one for OD (own damage) and one for TP (third party). ' +

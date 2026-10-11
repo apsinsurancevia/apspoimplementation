@@ -242,7 +242,7 @@ var STATEMENT_HEADERS_DATA = [
     'Total_Premium',
     'Customer_name',
     'Policy_issue_date',
-    'Skip table_name=TDS rows; skip rows where Subproducer_Code is non-empty; dedup by Policy_No+table_name'
+    'Skip table_name=TDS rows; skip rows where Subproducer_Code is non-empty; skip rows where Coinsurance_Flag indicates follower; Total_commission = OD_Commission + TP_Terrorism_commission (pre-summed); dedup by Policy_No+table_name'
   ],
   [
     'BAJAJ', 'xlsx', 'irdaPayoutReport', 5,
@@ -946,13 +946,26 @@ function seedDefaultPrompts() {
 
       'TATA':
         'Excel file, sheet name "Report". ' +
-        'CRITICAL RULE 1 — Exclude TDS rows: skip any row where the "table_name" column equals "TDS". ' +
-        'CRITICAL RULE 2 — Primary producer only: the "Subproducer_Code" column identifies child/sub-producer rows. ' +
-        'Include ONLY rows where "Subproducer_Code" is blank or empty. Rows with a populated Subproducer_Code are sub-producer entries — skip them entirely. ' +
-        'After applying both filters, if the same Policy_No still appears more than once (e.g. different table_name values), ' +
+        'Columns confirmed from actual statement: Policy_No, Proposal_No, Business_Place, Policy_start_date, ' +
+        'Policy_end_date, Policy_issue_date, Customer_name, Product_name, Package_name, Business_type, ' +
+        'Record_type_desc, Record_type_cd, endorsement_no, OD_Premium, TP_Terrorism_premium, Total_Premium, ' +
+        'OD_Commission, TP_Terrorism_commission, Total_commission, TDS, OD_Rate, TP_Rate, ' +
+        'Approved_Grid_Per_Policy, sap_doc_posting_no, Partner_Application_No, Certificate_No, Sol_ID, ' +
+        'Producer_Code, Subproducer_Code, Producer_Name, Commission_Cycle, UTR_Number, UTR_Date, Reason, ' +
+        'Coinsurance_Flag, PANNO, b_code, report_accounting_period, CCOMMISSION_MONTH, table_name, ' +
+        'GST_impact, Commission_Cycle_name, remarks, email, txt_commisiion_cycle, txt_status, ' +
+        'statement_sent, Payment_Flag, num_category_id, txt_category, File_type, product_code, product_cd, ' +
+        'Winflag, accounting_ts, sap_posting_ts, sap_doc_fiscal_year, statement_trig_ts. ' +
+        'Apply ALL THREE filters before extracting: ' +
+        'FILTER 1 — Exclude TDS rows: skip any row where "table_name" equals "TDS". ' +
+        'FILTER 2 — Primary producer only: skip any row where "Subproducer_Code" is non-empty. ' +
+        'FILTER 3 — Co-insurance: skip any row where "Coinsurance_Flag" indicates follower status (e.g. "F", "Follower"); include only direct or leader rows. ' +
+        'After all three filters, if the same Policy_No still appears more than once (different table_name values), ' +
         'include each distinct table_name as a separate element — do not collapse them. ' +
-        'policy_no = "Policy_No". brokerage_amount = "Total_commission" (full value, do not subtract TDS — TDS rows are excluded above). ' +
-        'insured_name = "Customer_name". premium_amount = "Total_Premium". policy_date = "Policy_issue_date".',
+        'policy_no = "Policy_No". ' +
+        'brokerage_amount = "Total_commission" (= OD_Commission + TP_Terrorism_commission pre-summed; do not subtract TDS — TDS rows are already excluded by Filter 1). ' +
+        'insured_name = "Customer_name". premium_amount = "Total_Premium". policy_date = "Policy_issue_date". ' +
+        'Skip rows where Total_commission is 0 or blank.',
 
       'UIIC':
         'Excel file, sheet name "Sheet1". Each policy appears as TWO rows — one for Motor OD (Dep No = "31 - Motor") ' +

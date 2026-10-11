@@ -74,7 +74,7 @@ var PRODUCT_MASTER_DATA = [
 // ── INSURER MASTER SEED DATA ──────────────────────────────────────────────────
 
 var INSURER_MASTER_DATA = [
-  // APS buyer GST roster (live deploy). Codes aligned with upstream where possible (SBIG = SBI).
+  // ── Active — APS live deploy with buyer GST (active = Y) ─────────────────
   ['GO','Go Digit General Insurance Limited','09AACCO4128Q1ZY','UTTAR PRADESH','09','1st Floor, Halwasiyas Commerce House, Habibullah Estate, 11 Mahatma Gandhi Marg, Hazratganj, Pin: 226001','997131','','Y'],
   ['ICICI','ICICI Lombard General Insurance Co Ltd','23AAACI7904G1ZV','MADHYA PRADESH','23','5th Floor, Maple High Street, Opposite Aashima Mall, Hoshangabad Road, Bhopal, Pin: 462026','997131','','Y'],
   ['INDUSIND','IndusInd General Insurance Company Limited','27AABCR6747B1ZG','MAHARASHTRA','27','119, Ayodhya Building, Near Bajaj Nagar Chowk, Behind Akruti Furniture, Bajaj Nagar, Nagpur – 440010','997131','','Y'],
@@ -86,11 +86,26 @@ var INSURER_MASTER_DATA = [
   ['USGI','Universal Sompo General Insurance Company Limited','23AAACU8917F1ZE','MADHYA PRADESH','23','M 12 to M 16, Part Commerce House, 7 Race Course Road, R.S. Bhandari Marg, Indore - 452001','997131','','Y'],
   ['KOTAK','Zurich Kotak General Insurance Company (India) Limited','07AAFCK7016C1ZV','DELHI','07','H 78, 23 Himalaya House, 7th Floor, KG Marg, New Delhi -110001','997131','','Y'],
   ['BAJAJ','Bajaj General Insurance Limited','23AABCB5730G1Z5','MADHYA PRADESH','23','4th Floor, 409, Commerce House, 7 Race Course Road, Indore, Pin: 452001','997131','','Y'],
+  ['UIIC','United India Insurance Company Limited','23AAACU5552C1ZR','MADHYA PRADESH','23','2, Second Block, Paryawas Bhawan, Jail Road, Arera Hills, Bhopal, Pin: 462011','997131','','Y'],
   ['IFFCO','IFFCO-Tokio General Insurance Company Limited','23AAACI7573H1ZK','MADHYA PRADESH','23','2nd Floor, 214, Zone-1, Bhagwan Complex, MP Nagar, Bhopal, Pin: 462011','997131','','Y'],
   ['KSHEMA','Kshema General Insurance Limited','36AAHCK1849H1ZD','TELANGANA','36','4th Floor, 413, My Home Tycoon Building, Kundan Bagh, Begumpet, Hyderabad, Pin: 500016','997131','','Y'],
   ['ROYAL','Royal Sundaram General Insurance Co Ltd','23AABCR7106G1ZR','MADHYA PRADESH','23','3rd and 4th Floor, 11, Alankar Complex, Zone II, MP Nagar, Bhopal, Pin: 462011','997131','','Y'],
   ['SHRIRAM','Shriram General Insurance Company Limited','23AAKCS2509K1ZB','MADHYA PRADESH','23','5th Floor, 502 and 503, Ashima Corporate Zone, Ashima The Lake City Mall, Hoshangabad Road, Bhopal, Pin: 462026','997131','','Y'],
-  ['UIIC','United India Insurance Company Limited','23AAACU5552C1ZR','MADHYA PRADESH','23','2, Second Block, Paryawas Bhawan, Jail Road, Arera Hills, Bhopal, Pin: 462011','997131','','Y']
+  // ── Inactive by default — deployer activates via Insurer_Catalogue tab ───
+  ['HDFC','HDFC ERGO GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','N'],
+  ['CHOLA','CHOLAMANDALAM MS GENERAL INSURANCE CO LTD','[GSTIN]','TAMILNADU','TN','[ADDRESS]','997131','[SPOC_EMAIL]','N'],
+  ['LIBERTY','LIBERTY GENERAL INSURANCE LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','N'],
+  ['ROYALSUN','ROYAL SUNDARAM GENERAL INSURANCE CO LTD','[GSTIN]','TAMILNADU','TN','[ADDRESS]','997131','[SPOC_EMAIL]','N'],
+  ['FGII','FUTURE GENERALI INDIA INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','N'],
+  ['ACKO','ACKO GENERAL INSURANCE LTD','[GSTIN]','KARNATAKA','KA','[ADDRESS]','997131','[SPOC_EMAIL]','N'],
+  ['NAVI','NAVI GENERAL INSURANCE LTD','[GSTIN]','KARNATAKA','KA','[ADDRESS]','997131','[SPOC_EMAIL]','N'],
+  ['SOMPO','SOMPO INDIA GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','N'],
+  ['ZUNO','ZUNO GENERAL INSURANCE LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','N'],
+  ['STARHEALTH','STAR HEALTH AND ALLIED INSURANCE CO LTD','[GSTIN]','TAMILNADU','TN','[ADDRESS]','997131','[SPOC_EMAIL]','N'],
+  ['CARE','CARE HEALTH INSURANCE LTD','[GSTIN]','HARYANA','HR','[ADDRESS]','997131','[SPOC_EMAIL]','N'],
+  ['NIVABUPA','NIVA BUPA HEALTH INSURANCE CO LTD','[GSTIN]','DELHI','DL','[ADDRESS]','997131','[SPOC_EMAIL]','N'],
+  ['ABHI','ADITYA BIRLA HEALTH INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','N'],
+  ['MANIPALCIGNA','MANIPALCIGNA HEALTH INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','N']
 ];
 
 /**
@@ -393,7 +408,58 @@ var INSURER_CODE_MAP_DATA = [
   ['SBI General','SBIG','Short name variant'],
   ['SBI GENERAL','SBIG','Uppercase variant'],
   ['SBI General Insurance','SBIG','Full name variant'],
-  ['SBI GENERAL INSURANCE','SBIG','Full name uppercase']
+  ['SBI GENERAL INSURANCE','SBIG','Full name uppercase'],
+  // ── Inactive-by-default insurers (activate via Insurer_Catalogue) ─────────
+  ['HDFC','HDFC','Direct match'],
+  ['HDFC Ergo','HDFC','Short name variant'],
+  ['HDFC ERGO','HDFC','Uppercase variant'],
+  ['HDFC Ergo General Insurance','HDFC','Full name variant'],
+  ['CHOLA','CHOLA','Direct match'],
+  ['Cholamandalam MS','CHOLA','Short name variant'],
+  ['Chola MS','CHOLA','Abbreviated variant'],
+  ['IFFCO','IFFCO','Direct match'],
+  ['IFFCO Tokio','IFFCO','Short name variant'],
+  ['IFFCO-Tokio','IFFCO','Hyphenated variant'],
+  ['LIBERTY','LIBERTY','Direct match'],
+  ['Liberty General','LIBERTY','Short name variant'],
+  ['ROYALSUN','ROYALSUN','Direct match'],
+  ['Royal Sundaram','ROYALSUN','Short name variant'],
+  ['ROYAL SUNDARAM','ROYALSUN','Uppercase variant'],
+  ['SHRIRAM','SHRIRAM','Direct match'],
+  ['Shriram General','SHRIRAM','Short name variant'],
+  ['FGII','FGII','Direct match'],
+  ['Future Generali','FGII','Short name variant'],
+  ['FUTURE GENERALI','FGII','Uppercase variant'],
+  ['ACKO','ACKO','Direct match'],
+  ['Acko','ACKO','Mixed case variant'],
+  ['NAVI','NAVI','Direct match'],
+  ['Navi General','NAVI','Short name variant'],
+  ['SOMPO','SOMPO','Direct match'],
+  ['Sompo India','SOMPO','Short name variant'],
+  ['Magma HDI','SOMPO','Former name — rebranded to Sompo India'],
+  ['MAGMA HDI','SOMPO','Former name uppercase'],
+  ['ZUNO','ZUNO','Direct match'],
+  ['Zuno','ZUNO','Mixed case variant'],
+  ['Edelweiss General','ZUNO','Former name variant'],
+  ['KSHEMA','KSHEMA','Direct match'],
+  ['Kshema','KSHEMA','Mixed case variant'],
+  ['STARHEALTH','STARHEALTH','Direct match'],
+  ['Star Health','STARHEALTH','Short name variant'],
+  ['STAR HEALTH','STARHEALTH','Uppercase variant'],
+  ['Star Health Allied','STARHEALTH','Short name variant 2'],
+  ['CARE','CARE','Direct match'],
+  ['Care Health','CARE','Short name variant'],
+  ['Religare Health','CARE','Former name variant'],
+  ['NIVABUPA','NIVABUPA','Direct match'],
+  ['Niva Bupa','NIVABUPA','Short name variant'],
+  ['NIVA BUPA','NIVABUPA','Uppercase variant'],
+  ['Max Bupa','NIVABUPA','Former name variant'],
+  ['ABHI','ABHI','Direct match'],
+  ['Aditya Birla Health','ABHI','Short name variant'],
+  ['ADITYA BIRLA HEALTH','ABHI','Uppercase variant'],
+  ['MANIPALCIGNA','MANIPALCIGNA','Direct match'],
+  ['ManipalCigna','MANIPALCIGNA','Mixed case variant'],
+  ['Manipal Cigna','MANIPALCIGNA','Space variant']
 ];
 
 // ── PRODUCT MAP SEED DATA ─────────────────────────────────────────────────────
@@ -907,7 +973,36 @@ function createBrokerConfig_(folderId) {
   addTab_(ss, 'Prompts',
     ['insurer_id','prompt_template','notes'], '#444444');
 
-  Logger.log('Broker Config Sheet created with 8 tabs');
+  // Tab 9: Insurer_Catalogue — full IRDAI-registered list; deployer checks what they want
+  var catSheet = addTab_(ss, 'Insurer_Catalogue', [
+    'use','insurer_id','insurer_name','type','state'
+  ], '#1a4971');
+  if (catSheet.getLastRow() > 1) {
+    catSheet.getRange(2, 1, catSheet.getLastRow() - 1, 5).clearContent();
+  }
+  var INSURER_TYPE_MAP = {
+    'OR':'Public Sector','NIC':'Public Sector','UIIC':'Public Sector','NIA':'Public Sector',
+    'BAJAJ':'Private','GO':'Private','HDFC':'Private','ICICI':'Private','IFFCO':'Private',
+    'KOTAK':'Private','LIBERTY':'Private','INDUSIND':'Private','ROYALSUN':'Private',
+    'SBIG':'Private','SHRIRAM':'Private','TATA':'Private','USGI':'Private','CHOLA':'Private',
+    'FGII':'Private','SOMPO':'Private','ACKO':'Private','NAVI':'Private','ZUNO':'Private',
+    'KSHEMA':'Private',
+    'STARHEALTH':'SAHI','CARE':'SAHI','NIVABUPA':'SAHI','ABHI':'SAHI','MANIPALCIGNA':'SAHI'
+  };
+  var catRows = [];
+  for (var ci = 0; ci < INSURER_MASTER_DATA.length; ci++) {
+    var r = INSURER_MASTER_DATA[ci];
+    catRows.push([r[8] === 'Y', r[0], r[1], INSURER_TYPE_MAP[r[0]] || 'Private', r[3]]);
+  }
+  catSheet.getRange(2, 1, catRows.length, 5).setValues(catRows);
+  catSheet.getRange(2, 1, catRows.length, 1).insertCheckboxes();
+  catSheet.setColumnWidth(1, 55);
+  catSheet.setColumnWidth(2, 110);
+  catSheet.setColumnWidth(3, 330);
+  catSheet.setColumnWidth(4, 120);
+  catSheet.setColumnWidth(5, 130);
+
+  Logger.log('Broker Config Sheet created with 9 tabs');
   return ss.getId();
 }
 
@@ -1107,9 +1202,140 @@ function refreshInsurerStatus() {
 
     SpreadsheetApp.flush();
     Logger.log('refreshInsurerStatus: updated ' + updated + ' rows');
+
+    // ── Self-termination: stop daily trigger when all statuses are Y ──────────
+    var allGreen = true;
+    var refreshedData = statusSheet.getDataRange().getValues();
+    for (var j = 1; j < refreshedData.length; j++) {
+      var rowId = (refreshedData[j][0] || '').toString().trim();
+      if (!rowId) continue;
+      var dStat = (refreshedData[j][2] || '').toString().trim();
+      var gStat = (refreshedData[j][3] || '').toString().trim();
+      var sStat = (refreshedData[j][4] || '').toString().trim();
+      if (dStat !== 'Y' || gStat !== 'Y' || sStat !== 'Y') {
+        allGreen = false;
+        break;
+      }
+    }
+
+    if (allGreen) {
+      disableStatusRefreshTrigger();
+      Logger.log('refreshInsurerStatus: all insurers fully configured — daily trigger removed.');
+      try {
+        var coordinatorEmail = CONFIG.EMAIL_COORDINATOR;
+        if (coordinatorEmail) {
+          GmailApp.sendEmail(
+            coordinatorEmail,
+            '[CaliberPO] Setup Complete — All Insurers Configured',
+            'All 12 insurers now show Y for data_configured, grid_configured, and statement_configured.\n\n' +
+            'The daily Insurer_Status refresh trigger has been automatically removed.\n\n' +
+            'CaliberPO is ready for production recon runs.'
+          );
+        }
+      } catch (mailErr) {
+        Logger.log('refreshInsurerStatus: could not send completion email — ' + mailErr.message);
+      }
+    }
+
+    return { updated: updated, allGreen: allGreen };
+
+  }, 'MANUAL');
+}
+
+/**
+ * Reads the Insurer_Catalogue tab and updates the active column in Insurer Master.
+ * Checked rows → active = Y; unchecked rows → active = N.
+ * No other tabs or functions are affected.
+ *
+ * Run after toggling checkboxes in the Insurer_Catalogue tab:
+ *   applyInsurerSelection()
+ */
+function applyInsurerSelection() {
+  return wrapWithErrorHandling('applyInsurerSelection', function() {
+    var configSS = SpreadsheetApp.openById(CONFIG.SHEET_BROKER_CONFIG);
+    var catSheet = configSS.getSheetByName('Insurer_Catalogue');
+    if (!catSheet) throw new Error('Insurer_Catalogue tab not found. Run runSetup() first.');
+
+    var catData = catSheet.getDataRange().getValues();
+    // col A (index 0) = checkbox; col B (index 1) = insurer_id
+    var selectionMap = {};
+    for (var i = 1; i < catData.length; i++) {
+      var id = (catData[i][1] || '').toString().trim();
+      if (id) selectionMap[id] = !!catData[i][0];
+    }
+
+    var masterSS    = SpreadsheetApp.openById(CONFIG.SHEET_INSURER_MASTER);
+    var masterSheet = masterSS.getSheetByName('Insurers');
+    var masterData  = masterSheet.getDataRange().getValues();
+    var headers     = masterData[0].map(function(h) { return (h || '').toString().trim(); });
+    var idCol       = headers.indexOf('insurer_id') + 1;
+    var activeCol   = headers.indexOf('active') + 1;
+
+    if (!idCol || !activeCol) {
+      throw new Error('insurer_id or active column not found in Insurer Master.');
+    }
+
+    var updated = 0;
+    for (var r = 1; r < masterData.length; r++) {
+      var rid = (masterData[r][idCol - 1] || '').toString().trim();
+      if (!rid || !(rid in selectionMap)) continue;
+      masterSheet.getRange(r + 1, activeCol).setValue(selectionMap[rid] ? 'Y' : 'N');
+      updated++;
+    }
+
+    SpreadsheetApp.flush();
+    Logger.log('applyInsurerSelection: updated active flag for ' + updated + ' insurers in Insurer Master.');
     return { updated: updated };
 
   }, 'MANUAL');
+}
+
+/**
+ * Creates a daily trigger that runs refreshInsurerStatus() every morning.
+ * The trigger removes itself automatically once all insurers are fully
+ * configured (every status column = Y).
+ *
+ * Run once at the start of a new deployment:
+ *   enableStatusRefreshTrigger()
+ *
+ * Safe to call again — skips creation if the trigger already exists.
+ */
+function enableStatusRefreshTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'refreshInsurerStatus') {
+      Logger.log('Status refresh trigger already exists — skipping creation.');
+      return;
+    }
+  }
+
+  ScriptApp.newTrigger('refreshInsurerStatus')
+    .timeBased()
+    .everyDays(1)
+    .atHour(8)
+    .inTimezone('Asia/Kolkata')
+    .create();
+
+  Logger.log('Daily status refresh trigger created (08:00 IST). ' +
+    'Will self-terminate once all insurers are fully configured.');
+}
+
+/**
+ * Manually removes the daily status refresh trigger.
+ * Use if you want to stop the daily run before all boxes are green.
+ */
+function disableStatusRefreshTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var removed  = 0;
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'refreshInsurerStatus') {
+      ScriptApp.deleteTrigger(triggers[i]);
+      removed++;
+    }
+  }
+  Logger.log(removed > 0
+    ? 'Status refresh trigger removed.'
+    : 'No status refresh trigger found.');
 }
 
 /**

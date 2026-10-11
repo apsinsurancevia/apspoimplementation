@@ -166,6 +166,98 @@ var PRODUCT_MAP_DATA = [
   ['Product Sub Type','New (5+5)','product_sub_type','New (5+5)','Direct match']
 ];
 
+// ── STATEMENT HEADERS SEED DATA ──────────────────────────────────────────────
+// Maps each insurer's actual statement column names to CaliberPO canonical fields.
+// Used by seedDefaultPrompts() and the Python invoice generator.
+//
+// Columns: insurer_id | file_format | sheet_name | header_row
+//        | policy_no_col | brokerage_col | premium_col
+//        | insured_name_col | date_col | notes
+
+var STATEMENT_HEADERS_DATA = [
+  [
+    'OR', 'pdf', '', 1,
+    'Policy No.',
+    'Comm. / Ref. Comm. (Rs.)',
+    'Premium / Ref. Premium (Rs.)',
+    'Insured Name',
+    'Policy Expiry Date',
+    'OD+TP rows per policy_no — sum Comm and Premium across both rows; return one element per policy'
+  ],
+  [
+    'NIC', 'pdf', '', 1,
+    'Policy Number',
+    'Commission',
+    'Premium',
+    'Insured Name',
+    'Issue Date',
+    'Skip rows where Commission is 0 or blank'
+  ],
+  [
+    'UIIC', 'xlsx', 'Sheet1', 1,
+    'Policy No',
+    'Comm Amt',
+    'Premium Amt',
+    'Insured Name',
+    'Policy Exp Dt',
+    'OD (Dep 31 - Motor) + TP (Dep 32 - Motor TP) per Policy No — sum both rows'
+  ],
+  [
+    'USGI', 'xlsx', 'MOTOR', 2,
+    'policyNo',
+    'total_amount',
+    'net_Premium',
+    'customer_Name',
+    'policy_Issue_Date',
+    'Two sheets: MOTOR and NON-MOTOR — header row is row 2 on both; combine and extract from both'
+  ],
+  [
+    'TATA', 'xlsx', 'Report', 1,
+    'Policy_No',
+    'Total_commission',
+    'Total_Premium',
+    'Customer_name',
+    'Policy_issue_date',
+    'Skip table_name=TDS rows; skip rows where Subproducer_Code is non-empty; dedup by Policy_No+table_name'
+  ],
+  [
+    'BAJAJ', 'xlsx', 'irdaPayoutReport', 5,
+    'POLICY_REFERENCE',
+    'TOTAL COMMISSION',
+    'NET PREMIUM',
+    'CUSTOMER NAME',
+    'POLICY DATE',
+    'Data starts at row 5 (first 4 rows blank); skip rows where TOTAL COMMISSION is 0 or blank'
+  ],
+  [
+    'GO', 'xlsb', 'AAZCA5637P', 1,
+    'policy_number',
+    'TOTAL_AMT',
+    'net_premium',
+    'policy_holder',
+    'policy_issue_date',
+    'TOTAL_AMT = IRDA_AMT + REWARD_AMT; product_lob has LOB; all column names are lowercase except commission cols'
+  ],
+  [
+    'INDUSIND', 'xlsx', '', 1,
+    '',
+    '',
+    '',
+    '',
+    '',
+    'Format unknown — pending actual statement file; update this row once received'
+  ],
+  [
+    'NIA', 'pdf', '', 1,
+    'Policy Number',
+    'Brokerage',
+    'Premium',
+    'Insured Name',
+    'Policy Inception Date',
+    'Extract from Policy Detail section only; ignore Tax Summary section'
+  ]
+];
+
 // ── DERIVATION RULES SEED DATA ────────────────────────────────────────────────
 
 var DERIVATION_RULES_DATA = [
@@ -435,11 +527,22 @@ function createBrokerConfig_(folderId) {
     ['INSURER_INVOICE_COUNTER', 0]
   ]);
 
-  // Tab 6: Prompts
+  // Tab 6: Statement_Headers
+  var shSheet = addTab_(ss, 'Statement_Headers', [
+    'insurer_id','file_format','sheet_name','header_row',
+    'policy_no_col','brokerage_col','premium_col',
+    'insured_name_col','date_col','notes'
+  ], '#1a4971');
+  if (shSheet.getLastRow() > 1) {
+    shSheet.getRange(2, 1, shSheet.getLastRow() - 1, 10).clearContent();
+  }
+  shSheet.getRange(2, 1, STATEMENT_HEADERS_DATA.length, 10).setValues(STATEMENT_HEADERS_DATA);
+
+  // Tab 7: Prompts
   addTab_(ss, 'Prompts',
     ['insurer_id','prompt_template','notes'], '#444444');
 
-  Logger.log('Broker Config Sheet created with 6 tabs');
+  Logger.log('Broker Config Sheet created with 7 tabs');
   return ss.getId();
 }
 
@@ -733,8 +836,21 @@ function seedDefaultPrompts() {
 
       'GO':
         'Excel file (.xlsb format), sheet name "AAZCA5637P". ' +
-        'policy_no = "policy_number". brokerage_amount = "TOTAL_AMT". ' +
-        'insured_name = "policy_holder". premium_amount = "net_premium". policy_date = "policy_issue_date".',
+        'Columns confirmed from actual statement: policy_number, version_no, endorsement_ind, policy_issue_date, ' +
+        'risk_inc_date, risk_exp_date, office_code, office_name, state, user_id, imd_code, imd_name, ' +
+        'imd_channel, imd_channel_irda, product_code, product_name, product_lob, vehicle_make, vehicle_model, ' +
+        'fuel_type, veh_reg_no, rto_location, veh_age, veh_type, vehicle_subtype, veh_usage, veh_wheels, ' +
+        'veh_seating, veh_gvw, veh_cc, policy_holder, ph_pincode, od_premium, tp_premium, add_on_premium, ' +
+        'sum_insured, net_premium, issue_source, account_manager, prev_policy_expiry, curr_ncb, ' +
+        'comm_disc_rate, comm_disc_amt, zero_dep_cover, tarrif_premium, veh_reg_date, technical_premium, ' +
+        'cng_flag, SUR_PERS, partner_preferred_discount, incremental_variation, office_gst_number, ' +
+        'ph_gst_number, vehicle_code, od_premium_before_commerical_discount, od_premium_at_commerical_discount, ' +
+        'carrier_type, net_premium_coll, product_package, insured_person, policy_type, policy_status, ' +
+        'prev_insurer, prev_policy_no, prev_ncb, endorse_reasons, AM_Location, Month, transaction_seq_number, ' +
+        'Terrorism, Pan Number, mail_id, File_Split_Tag, IRDA_AMT, REWARD_AMT, TOTAL_AMT, Master_Policy_No, Gst_Flag. ' +
+        'Mappings: policy_no = "policy_number". brokerage_amount = "TOTAL_AMT" (this is IRDA_AMT + REWARD_AMT combined — use TOTAL_AMT directly). ' +
+        'insured_name = "policy_holder". premium_amount = "net_premium". policy_date = "policy_issue_date". ' +
+        'Skip rows where TOTAL_AMT is 0 or blank.',
 
       'NIC':
         'PDF statement. Tables span multiple pages. ' +

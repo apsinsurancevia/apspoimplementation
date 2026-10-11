@@ -36,6 +36,12 @@ function doGet(e) {
     if (action === 'backfillporate') {
       return handleBackfillPoRateRequest_(e);
     }
+    if (action === 'wipegriddata') {
+      return handleWipeGridDataRequest_(e);
+    }
+    if (action === 'ensureconfigtabs') {
+      return handleEnsureConfigTabsRequest_(e);
+    }
     if (action === 'fillinsurers') {
       return handleFillInsurersRequest_(e);
     }
@@ -329,6 +335,90 @@ function handleBackfillPoRateRequest_(e) {
   } catch (err) {
     return jsonOut_({ success: false, error: err.message });
   }
+}
+
+/** ?action=wipeGridData&key=... — clear data rows on all FY product tabs in Grids folder */
+function handleWipeGridDataRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    return jsonOut_({ success: true, result: wipeAllProductGridData_() });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/** ?action=ensureConfigTabs&key=... — create Insurer_Status / Statement_Headers if missing */
+function handleEnsureConfigTabsRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    var ensured = ensureBrokerConfigExtraTabs_();
+    var status = null;
+    try { status = refreshInsurerStatus(); } catch (re) { status = { error: re.message }; }
+    return jsonOut_({ success: true, ensured: ensured, status: status });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/**
+ * Ensures Insurer_Status + Statement_Headers exist on CaliberPO Config
+ * (older APS setups were created before those tabs existed).
+ */
+function ensureBrokerConfigExtraTabs_() {
+  if (!CONFIG.SHEET_BROKER_CONFIG) throw new Error('CONFIG.SHEET_BROKER_CONFIG is blank');
+  var ss = SpreadsheetApp.openById(CONFIG.SHEET_BROKER_CONFIG);
+  var created = [];
+
+  if (!ss.getSheetByName('Insurer_Status')) {
+    var isSheet = ss.insertSheet('Insurer_Status');
+    var headers = ['insurer_id','insurer_name','data_configured','grid_configured','statement_configured','notes','last_updated'];
+    isSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    if (typeof INSURER_STATUS_DATA !== 'undefined' && INSURER_STATUS_DATA.length) {
+      isSheet.getRange(2, 1, INSURER_STATUS_DATA.length, 7).setValues(INSURER_STATUS_DATA);
+    }
+    created.push('Insurer_Status');
+  }
+
+  if (!ss.getSheetByName('Statement_Headers')) {
+    var sh = ss.insertSheet('Statement_Headers');
+    var shHeaders = ['insurer_id','file_format','sheet_name','header_row','policy_no_col','brokerage_col','premium_col','insured_name_col','date_col','notes'];
+    sh.getRange(1, 1, 1, shHeaders.length).setValues([shHeaders]);
+    if (typeof STATEMENT_HEADERS_DATA !== 'undefined' && STATEMENT_HEADERS_DATA.length) {
+      sh.getRange(2, 1, STATEMENT_HEADERS_DATA.length, 10).setValues(STATEMENT_HEADERS_DATA);
+    }
+    created.push('Statement_Headers');
+  }
+
+  SpreadsheetApp.flush();
+  return { created: created, existing: created.length === 0 };
+}
+
+/** Clears data rows (keeps headers) on all *_YY-YY product tabs under Grids. */
+function wipeAllProductGridData_() {
+  var folder = DriveApp.getFolderById(CONFIG.FOLDER_GRIDS);
+  var files = folder.getFiles();
+  var summary = [];
+  while (files.hasNext()) {
+    var file = files.next();
+    if (file.getName().toLowerCase().indexOf('grid') === -1) continue;
+    var ss = SpreadsheetApp.openById(file.getId());
+    var cleared = 0;
+    ss.getSheets().forEach(function(sheet) {
+      if (!/^[A-Za-z]+_\d{2}-\d{2}$/.test(sheet.getName())) return;
+      var last = sheet.getLastRow();
+      if (last > 1) {
+        sheet.getRange(2, 1, last - 1, sheet.getLastColumn()).clearContent();
+        cleared++;
+      }
+    });
+    if (cleared) summary.push({ file: file.getName(), tabsCleared: cleared });
+  }
+  SpreadsheetApp.flush();
+  return { files: summary.length, details: summary };
 }
 
 /** Backfill blank po_rate from pi_rate for one insurer or all grid sheets. */

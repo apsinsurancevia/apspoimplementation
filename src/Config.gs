@@ -19,61 +19,60 @@
 const CONFIG = {
 
   // ── BROKER IDENTITY ──────────────────────────────────────────────────────
-  BROKER_NAME:              "",   // Trading name e.g. "APS Insurance Broking"
-  BROKER_LEGAL_NAME:        "",   // Legal entity name for invoices
-  BROKER_SHORT_CODE:        "",   // 2-4 letters e.g. "APS" — used in file names and invoice prefixes
-  BROKER_GSTIN:             "",   // 15-character GSTIN
-  BROKER_PAN:               "",   // 10-character PAN
-  BROKER_STATE:             "",   // State name e.g. "MAHARASHTRA"
-  BROKER_STATE_CODE:        "",   // 2-digit GST state code e.g. "27"
-  BROKER_ADDRESS:           "",   // Full registered address for invoices
-  BROKER_BANK_NAME:         "",   // Bank name for invoice footer
-  BROKER_BANK_ACCOUNT:      "",   // Account number
-  BROKER_BANK_IFSC:         "",   // IFSC code
-  BROKER_BANK_BRANCH:       "",   // Branch name
-  IRDAI_REG_NUMBER:         "",   // IRDAI broker registration number
+  BROKER_NAME:              "APS Insurance Broking Services Private Limited",
+  BROKER_LEGAL_NAME:        "APS Insurance Broking Services Private Limited",
+  BROKER_SHORT_CODE:        "APS",
+  BROKER_GSTIN:             "23AAZCA5637P1ZT",
+  BROKER_PAN:               "AAZCA5637P",
+  BROKER_STATE:             "MADHYA PRADESH",
+  BROKER_STATE_CODE:        "23",
+  BROKER_ADDRESS:           "68, Sundar Nagar Ext, Indore, DDU Agar, Indore, Madhya Pradesh, India — Pin: 452010",
+  BROKER_BANK_NAME:         "ICICI Bank",
+  BROKER_BANK_ACCOUNT:      "656905601822",
+  BROKER_BANK_IFSC:         "ICIC0006569",
+  BROKER_BANK_BRANCH:       "Indore M G Road",
+  IRDAI_REG_NUMBER:         "1054",   // IRDAI Licensed Insurance Broker | CIN: U66220MP2023PTC068251
 
   // ── TAX & INVOICE ─────────────────────────────────────────────────────────
   DEFAULT_TDS_RATE:         0.05,   // Section 194H — 5% with PAN
   NO_PAN_TDS_RATE:          0.20,   // Section 206AA — 20% without PAN
   DEFAULT_GST_RATE:         0.18,   // 18% GST on commission
   SAC_CODE:                 "997131", // SAC code for insurance distribution services
-  PARTNER_INVOICE_PREFIX:   "",   // e.g. "APS-PINV" — partner invoice number prefix
-  INSURER_INVOICE_PREFIX:   "",   // e.g. "APS-IINV" — insurer invoice number prefix
+  PARTNER_INVOICE_PREFIX:   "APS/PI/",
+  INSURER_INVOICE_PREFIX:   "APS/II/",
 
   // ── EMAIL ROUTING ─────────────────────────────────────────────────────────
-  WORKSPACE_DOMAIN:         "",   // Google Workspace domain e.g. "novoup.com"
-  EMAIL_COORDINATOR:        "",   // All errors, alerts, exception reports
-  EMAIL_SENDER:             "",   // From address for all outbound emails
-  EMAIL_FINANCE:            "",   // Insurer invoices
-  EMAIL_RECON:              "",   // Reconciliation reports
+  WORKSPACE_DOMAIN:         "apsinsurancevia.in",
+  EMAIL_COORDINATOR:        "it@apsinsurancevia.in",
+  EMAIL_SENDER:             "it@apsinsurancevia.in",
+  EMAIL_FINANCE:            "it@apsinsurancevia.in",
+  EMAIL_RECON:              "it@apsinsurancevia.in",
 
   // ── DRIVE FOLDER IDs ──────────────────────────────────────────────────────
-  // Populated automatically by setup.gs — do not edit manually
-  FOLDER_ROOT:              "15_wrWjP0LcE5t0HPyBySMkP75ghflOdI",
-  FOLDER_GRIDS:             "15CJn8xIZBSRBw-e-O8kxZyW0RP7yx2mh",
-  FOLDER_INPUT:             "1vEbWYxKgsfvcgfrvNlA2bt_1zRJZ1FII",
-  FOLDER_OUTPUT:            "1NqXigXR53Itar0Oo9hlskV8qDgcD6wtU",
-  FOLDER_STATEMENTS:        "1MqjFVSbIjbxBtpxGYQmsZhkkCm6YItiJ",
-  FOLDER_INVOICES:          "1C6LYc-ck4JQOeddoGM86_6XhzTD2l9X_",
-  FOLDER_INVOICES_PARTNER:  "1vS7xvWUq1CbKiCaBoB1O1jbN255VBIYp",
-  FOLDER_INVOICES_INSURER:  "1iKB5MI0KeoK-TEfNJtQCVAEg5rseWaL9",
-  FOLDER_RECONCILIATION:    "1tWADGbJ9EJKRl3NeVirAmPkcF7itdXq-",
-  FOLDER_MASTERS:           "1DZHBZFTBMxHVmeW0-RWYomUJ_uM8v1nh",
-  FOLDER_BACKUP:            "1oEX-shlNq9TSe0XIfPRj_pKPpfOs26hI",
-  FOLDER_LOG:               "1TxWyL8SVAxZ1oQUAeiz_yreKIuWwm5q0",
-  FOLDER_GRID_IMPORT:       "1VqB8OyvbxcjuIE3o-uUY1i-NPlm4Obsz",  // Inbox — drop .xlsx files here, run importGridsFromFolder()
-  FOLDER_GRID_ARCHIVE:      "1hM7zzwCW-LBilUs7Q-60qx1Z8NTm39Uh",  // Permanent archive — one sub-folder per insurer, auto-populated
+  // Leave blank for fresh deploy — populated by setup.gs / runSetup()
+  FOLDER_ROOT:              "1KZBvUZyt1Y8l0-hfNa6nz5SLkENEnsue",
+  FOLDER_GRIDS:             "125lwRE7R-NSNnHolBGIBA_z3kLm4-vT2",
+  FOLDER_INPUT:             "1hsnV7phJt7f1qDQc4zp8YZ732z8VtUX0",
+  FOLDER_OUTPUT:            "17UeDCGTHhHNRJtJtVZ1U8I2CQmeCEUxT",
+  FOLDER_STATEMENTS:        "1R03oxUxSQeP2y-ja2KKjqEJOvGAg3oDw",
+  FOLDER_INVOICES:          "19GAc9faQ9Sw0LPTNATvpRdmrKbIeHydL",
+  FOLDER_INVOICES_PARTNER:  "1QXeJVhcfeWnNdR_nNZseRuspzVm5-4Gq",
+  FOLDER_INVOICES_INSURER:  "1BJz9UVDYvWgo4J_FUY2OHwiddaSZhrJN",
+  FOLDER_RECONCILIATION:    "133awcnVEAqUYqBBMhjIO5_F0DXpI-jJy",
+  FOLDER_MASTERS:           "1hxNk6XjbZwUfeeFgOtbFSJKi9J7rMokz",
+  FOLDER_BACKUP:            "1xL3CSTCAi_iDZwTcgx-32mSyPwcoTmvj",
+  FOLDER_LOG:               "1W4HxYC7fZbaV7TaaxUNGWBRqOT9P2mun",
+  FOLDER_GRID_IMPORT:       "1-h1bFSfpP8yZxejdK95IEXXbmfjnbBb7",  // Inbox — drop .xlsx files here, run importGridsFromFolder()
+  FOLDER_GRID_ARCHIVE:      "1bpxRcEnSxnjnss2cgvFgydRbtmF4ACMv",  // Permanent archive — one sub-folder per insurer, auto-populated
 
   // ── SHEET IDs ─────────────────────────────────────────────────────────────
-  // Populated automatically by setup.gs — do not edit manually
-  SHEET_PRODUCT_MASTER:     "1F0kwAEEurcwrFMFn5AYj-I71ARDkh_j0MoJEAO2eX0s",
-  SHEET_RTO_MASTER:         "1oG8r13qOqj0j1mJlLavxd1_VdTNC3nd9lA6mpaAhqig",
-  SHEET_INSURER_MASTER:     "1GvECCDrVFsp_SXvlEZpL7hhO26sdADBVFQYdoTnRMZw",
-  SHEET_BROKER_CONFIG:      "1xZgKqKHn9uxsVbTnwqe3gIKSA7_nI1J5xML31DqdcKU",
-  SHEET_PARTNER_MASTER:     "1Hmh9URj-FThexpjhTJLuxb0XbuOu_2LZl6nih13Nj5w",
-  SHEET_RECONCILIATION:     "1UxNAsDtlnA7EcJSrsVEnhADS8nxtJLSmPnkaHrD6scg",
-  SHEET_LOG:                "1gp7RgWIANC13n7QP1JKOcl3MiaZiPUDA73ZxLWGxDfQ",
+  SHEET_PRODUCT_MASTER:     "1N9-fAHpnouCU-XHgTX_fEUQIuKW-JPyobPLr6BYZGDQ",
+  SHEET_RTO_MASTER:         "1VOHj4g-FsGwluMoJ3p_LYSmuHc3xyahEYm72Og6DyGA",
+  SHEET_INSURER_MASTER:     "1NKyVjVDPVb4jmVqbG7IbklLiBqYp1_hV0GRzYMDfBrc",
+  SHEET_BROKER_CONFIG:      "1coA6EzEuOI46J9Qzdc2wR0ztvRFbhsdkpb62m_6d8Q4",
+  SHEET_PARTNER_MASTER:     "1ar2mJyH7FA84FGkrhesVmculB-UoDLIc0g7LWtMzjWU",
+  SHEET_RECONCILIATION:     "1wztETZxR4eQVmFbcduBz9fpQfQ4d-pERqwpft8ECZ1M",
+  SHEET_LOG:                "1vferagc11KKa8DIPdrYg_M7AQkumnrIG1CCsrYyK3bQ",
 
   // ── CLAUDE API ────────────────────────────────────────────────────────────
   // API key is NEVER stored here — set in Apps Script Script Properties

@@ -1,0 +1,19 @@
+broker_field,broker_value,caliber_field,caliber_value,notes
+Product Type,Two Wheeler,product_type,TW,
+Product Type,Tractor,product_type,Tractor,Misc D vertical
+Product Type,GCV,product_type,GCV,
+Product Type,PCV,product_type,PCV,
+Product Type,Private Car,product_type,Pvt Car,
+Product Type,Car,product_type,Pvt Car,Short label variant
+Product Type,Commercial Vehicle,product_type,GCV,Default to GCV if unspecified
+Product Sub Type,Bike,product_sub_type,Scooter/Bike,
+Product Sub Type,Scooter,product_sub_type,Scooter/Bike,
+Product Sub Type,EV,product_sub_type,Scooter/Bike,Flag vehicle_fuel_type as Electric
+Product Sub Type,Electric,product_sub_type,Scooter/Bike,
+Product Sub Type,New,product_sub_type,1+1,New business — also check make_year
+Product Sub Type,Old,product_sub_type,1+1,Renewal — prior year make
+Product Sub Type,SAOD,product_sub_type,SAOD,Direct match
+Product Sub Type,SATP,product_sub_type,SATP,Direct match
+Product Sub Type,1+1,product_sub_type,1+1,Direct match
+Product Sub Type,New (1+5),product_sub_type,New (1+5),Direct match
+Product Sub Type,New (5+5),product_sub_type,New (5+5),Direct match

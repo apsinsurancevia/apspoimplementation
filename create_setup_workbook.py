@@ -13,7 +13,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
-OUT_DIR  = "/mnt/user-data/outputs"
+OUT_DIR  = os.path.dirname(os.path.abspath(__file__))
 OUT_FILE = "CaliberPO_Setup.xlsx"
 
 DARK_BLUE   = "1F3864"
@@ -131,15 +131,16 @@ INSURER_COL_WIDTHS = {
 # Pre-populate the 9 APS insurer IDs known from seedDefaultPrompts() in setup.gs.
 # User fills GSTIN, address, etc. after deployment.
 APS_INSURERS = [
-    {"insurer_id": "OR",      "insurer_name": "Oriental Insurance Company Ltd",          "sac_code": "997131", "active": "Y"},
-    {"insurer_id": "NIC",     "insurer_name": "National Insurance Company Ltd",           "sac_code": "997131", "active": "Y"},
-    {"insurer_id": "UIIC",    "insurer_name": "United India Insurance Company Ltd",       "sac_code": "997131", "active": "Y"},
-    {"insurer_id": "USGI",    "insurer_name": "Universal Sompo General Insurance Co Ltd", "sac_code": "997131", "active": "Y"},
-    {"insurer_id": "TATA",    "insurer_name": "Tata AIG General Insurance Company Ltd",   "sac_code": "997131", "active": "Y"},
-    {"insurer_id": "BAJAJ",   "insurer_name": "Bajaj Allianz General Insurance Co Ltd",   "sac_code": "997131", "active": "Y"},
-    {"insurer_id": "GO",      "insurer_name": "Go Digit General Insurance Ltd",           "sac_code": "997131", "active": "Y"},
-    {"insurer_id": "INDUSIND","insurer_name": "IndusInd Bank (Motor Insurance Partner)",  "sac_code": "997131", "active": "Y"},
-    {"insurer_id": "NIA",     "insurer_name": "New India Assurance Company Ltd",          "sac_code": "997131", "active": "Y"},
+    {"insurer_id": "GO",       "insurer_name": "Go Digit General Insurance Limited",                    "insurer_gstin": "09AACCO4128Q1ZY", "insurer_state": "UTTAR PRADESH",  "insurer_state_code": "09", "insurer_address": "1st Floor, Halwasiyas Commerce House, Habibullah Estate, 11 Mahatma Gandhi Marg, Hazratganj, Pin: 226001", "sac_code": "997131", "active": "Y"},
+    {"insurer_id": "ICICI",    "insurer_name": "ICICI Lombard General Insurance Co Ltd",               "insurer_gstin": "23AAACI7904G1ZV", "insurer_state": "MADHYA PRADESH", "insurer_state_code": "23", "insurer_address": "5th Floor, Maple High Street, Opposite Aashima Mall, Hoshangabad Road, Bhopal, Pin: 462026", "sac_code": "997131", "active": "Y"},
+    {"insurer_id": "INDUSIND", "insurer_name": "IndusInd General Insurance Company Limited",           "insurer_gstin": "27AABCR6747B1ZG", "insurer_state": "MAHARASHTRA",    "insurer_state_code": "27", "insurer_address": "119, Ayodhya Building, Near Bajaj Nagar Chowk, Behind Akruti Furniture, Bajaj Nagar, Nagpur – 440010", "sac_code": "997131", "active": "Y"},
+    {"insurer_id": "NIC",      "insurer_name": "National Insurance Company Limited",                   "insurer_gstin": "09AAACN9967E1Z1", "insurer_state": "UTTAR PRADESH",  "insurer_state_code": "09", "insurer_address": "C-7/34, Goras Building, Lahurabir, Varanasi, Pin: 221001", "sac_code": "997131", "active": "Y"},
+    {"insurer_id": "TATA",     "insurer_name": "Tata AIG General Insurance Co Ltd",                    "insurer_gstin": "09AABCT3518Q1ZU", "insurer_state": "UTTAR PRADESH",  "insurer_state_code": "09", "insurer_address": "Plot No E-1, 1st and 2nd Floor, Sector-8, Noida, District Gautam Budh Nagar, Noida – 201301", "sac_code": "997131", "active": "Y"},
+    {"insurer_id": "SBI",      "insurer_name": "SBI General Insurance Company Ltd",                    "insurer_gstin": "23AAMCS8857L1ZK", "insurer_state": "MADHYA PRADESH", "insurer_state_code": "23", "insurer_address": "2nd Floor, State Bank of India TT Nagar Main Branch Building, New Market, Bhopal", "sac_code": "997131", "active": "Y"},
+    {"insurer_id": "NIA",      "insurer_name": "The New India Assurance Co Ltd",                       "insurer_gstin": "23AAACN4165C1ZZ", "insurer_state": "MADHYA PRADESH", "insurer_state_code": "23", "insurer_address": "313-316, Shekhar Central, New Palasia Square, Indore, 452001", "sac_code": "997131", "active": "Y"},
+    {"insurer_id": "OR",       "insurer_name": "The Oriental Insurance Company Limited",               "insurer_gstin": "23AAACT0627R4Z4", "insurer_state": "MADHYA PRADESH", "insurer_state_code": "23", "insurer_address": "Ida Building, 4th Floor, 7, Race Course Road, Indore", "sac_code": "997131", "active": "Y"},
+    {"insurer_id": "USGI",     "insurer_name": "Universal Sompo General Insurance Company Limited",    "insurer_gstin": "23AAACU8917F1ZE", "insurer_state": "MADHYA PRADESH", "insurer_state_code": "23", "insurer_address": "M 12 to M 16, Part Commerce House, 7 Race Course Road, R.S. Bhandari Marg, Indore - 452001", "sac_code": "997131", "active": "Y"},
+    {"insurer_id": "KOTAK",    "insurer_name": "Zurich Kotak General Insurance Company (India) Limited","insurer_gstin": "07AAFCK7016C1ZV", "insurer_state": "DELHI",          "insurer_state_code": "07", "insurer_address": "H 78, 23 Himalaya House, 7th Floor, KG Marg, New Delhi -110001", "sac_code": "997131", "active": "Y"},
 ]
 
 

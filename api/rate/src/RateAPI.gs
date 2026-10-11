@@ -50,6 +50,9 @@
 
 function doGet(e) {
   try {
+    if (e && e.parameter && String(e.parameter.action || '').toLowerCase() === 'bootstrap') {
+      return handleRateBootstrap_(e);
+    }
     if (e && e.parameter && e.parameter.api === 'true') return handleRateRequest_(e);
     return ContentService
       .createTextOutput(JSON.stringify({ success: false, error: 'Missing api=true parameter' }))
@@ -57,6 +60,37 @@ function doGet(e) {
   } catch (err) {
     return apiResp_({ success: false, error: err.message });
   }
+}
+
+/** Configure RATE_API_KEY + Drive IDs for a fresh deploy. */
+function handleRateBootstrap_(e) {
+  var p = e.parameter || {};
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty('RATE_API_KEY') || '';
+  var bootKey = p.bootstrapKey || '';
+  if (existing && bootKey !== existing) {
+    return apiResp_({ success: false, error: 'bootstrapKey mismatch' });
+  }
+  if (p.RATE_API_KEY) props.setProperty('RATE_API_KEY', p.RATE_API_KEY);
+  if (p.FOLDER_GRIDS) props.setProperty('FOLDER_GRIDS', p.FOLDER_GRIDS);
+  if (p.SHEET_INSURER_MASTER) props.setProperty('SHEET_INSURER_MASTER', p.SHEET_INSURER_MASTER);
+  var cfg = getRateRuntimeConfig_();
+  return apiResp_({
+    success: true,
+    FOLDER_GRIDS: cfg.FOLDER_GRIDS,
+    SHEET_INSURER_MASTER: cfg.SHEET_INSURER_MASTER
+  });
+}
+
+function getRateRuntimeConfig_() {
+  var props = PropertiesService.getScriptProperties();
+  return {
+    FOLDER_GRIDS: props.getProperty('FOLDER_GRIDS') || RATE_CONFIG.FOLDER_GRIDS || '',
+    SHEET_INSURER_MASTER: props.getProperty('SHEET_INSURER_MASTER') || RATE_CONFIG.SHEET_INSURER_MASTER || '',
+    CACHE_TTL_INSURER_LIST: RATE_CONFIG.CACHE_TTL_INSURER_LIST,
+    CACHE_TTL_GRID_SHEET_ID: RATE_CONFIG.CACHE_TTL_GRID_SHEET_ID,
+    CACHE_TTL_RATE_RESULT: RATE_CONFIG.CACHE_TTL_RATE_RESULT
+  };
 }
 
 function handleRateRequest_(e) {
@@ -115,8 +149,9 @@ function handleRateRequest_(e) {
     var gridIdKey    = 'gid_' + ins.id;
     var gridSheetId  = cache.get(gridIdKey);
     if (!gridSheetId) {
-      gridSheetId = GridEngine.findInsurerGrid(ins.id, RATE_CONFIG.FOLDER_GRIDS, RATE_CONFIG.SHEET_INSURER_MASTER);
-      if (gridSheetId) cache.put(gridIdKey, gridSheetId, RATE_CONFIG.CACHE_TTL_GRID_SHEET_ID);
+      var cfg = getRateRuntimeConfig_();
+      gridSheetId = GridEngine.findInsurerGrid(ins.id, cfg.FOLDER_GRIDS, cfg.SHEET_INSURER_MASTER);
+      if (gridSheetId) cache.put(gridIdKey, gridSheetId, cfg.CACHE_TTL_GRID_SHEET_ID);
     }
     if (!gridSheetId) { declined.push({ insurerId: ins.id, insurerName: ins.name }); return; }
 
@@ -131,7 +166,7 @@ function handleRateRequest_(e) {
     } else {
       result = GridEngine.lookupRate(params, gridSheetId);
       if (result.matchStatus === 'MATCHED') {
-        try { cache.put(rateKey, JSON.stringify(result), RATE_CONFIG.CACHE_TTL_RATE_RESULT); } catch(ce) {}
+        try { cache.put(rateKey, JSON.stringify(result), getRateRuntimeConfig_().CACHE_TTL_RATE_RESULT); } catch(ce) {}
       }
     }
 
@@ -181,7 +216,7 @@ function resolveInsurerList_(insurerFilter) {
     all = JSON.parse(cached);
   } else {
     try {
-      var rows = GridEngine.getSheetDataAsObjects(RATE_CONFIG.SHEET_INSURER_MASTER, 'Insurers');
+      var rows = GridEngine.getSheetDataAsObjects(getRateRuntimeConfig_().SHEET_INSURER_MASTER, 'Insurers');
       all = rows
         .filter(function(r) { return r.active === 'Y'; })
         .map(function(r)    { return { id: r.insurer_id, name: r.insurer_name }; });

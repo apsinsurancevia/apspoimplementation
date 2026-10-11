@@ -17,18 +17,399 @@
  */
 function doGet(e) {
   try {
-    if (e && e.parameter && (e.parameter.api === 'true' || e.parameter.mode === 'api')) {
+    var action = (e && e.parameter && String(e.parameter.action || '').toLowerCase()) || '';
+    if (action === 'health') {
+      return handleHealthRequest_();
+    }
+    if (action === 'setprop') {
+      return handleSetPropRequest_(e);
+    }
+    if (action === 'updateinsurers') {
+      return handleUpdateInsurersRequest_(e);
+    }
+    if (action === 'importrto') {
+      return handleImportRtoRequest_(e);
+    }
+    if (action === 'createtestgrid') {
+      return handleCreateTestGridRequest_(e);
+    }
+    if (action === 'seedpartners') {
+      return handleSeedPartnersRequest_(e);
+    }
+    if (action === 'seedmasters') {
+      return handleSeedMastersRequest_(e);
+    }
+    if (action === 'setuparchives') {
+      return handleSetupArchivesRequest_(e);
+    }
+    if (action === 'setuptriggers') {
+      return handleSetupTriggersRequest_(e);
+    }
+    if (action === 'createallgrids') {
+      return handleCreateAllGridsRequest_(e);
+    }
+    if (action === 'importgrids') {
+      return handleImportGridsRequest_(e);
+    }
+    if (action === 'bootstrap') {
+      return handleBootstrapRequest_(e);
+    }
+    var mode = (e && e.parameter && String(e.parameter.mode || '').toLowerCase()) || '';
+    if (mode === 'rateapi' || action === 'rateapi') {
+      return handleGatewayRateApi_(e);
+    }
+    if (mode === 'gridrun' || action === 'gridrun') {
+      return handleGatewayGridRun_(e);
+    }
+    if (e && e.parameter && (e.parameter.api === 'true' || mode === 'api')) {
       return handleAPIRequest(e);
     }
     return HtmlService
       .createHtmlOutputFromFile('index')
       .setTitle('CaliberPO — Rate Lookup')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   } catch (err) {
     return ContentService
       .createTextOutput(JSON.stringify({ success: false, error: err.message }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+/**
+ * Set Script Properties remotely (bootstrap key required).
+ * ?action=setprop&key=...&CLAUDE_API_KEY=...&RATE_API_KEY=...&GRID_RUN_API_KEY=...
+ */
+function handleSetPropRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) {
+    return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  }
+  var props = PropertiesService.getScriptProperties();
+  var p = (e && e.parameter) || {};
+  var set = [];
+  ['CLAUDE_API_KEY', 'RATE_API_KEY', 'GRID_RUN_API_KEY', 'MONITORING_ENDPOINT', 'MONITORING_KEY'].forEach(function (k) {
+    if (p[k] !== undefined && p[k] !== null && String(p[k]).trim() !== '') {
+      props.setProperty(k, String(p[k]).trim());
+      set.push(k);
+    }
+  });
+  return jsonOut_({
+    success: true,
+    set: set,
+    hasClaude: !!props.getProperty('CLAUDE_API_KEY'),
+    hasRateKey: !!props.getProperty('RATE_API_KEY'),
+    hasGridKey: !!props.getProperty('GRID_RUN_API_KEY')
+  });
+}
+
+/** ?action=importRto&key=...&fileId=DRIVE_FILE_ID */
+function handleImportRtoRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    var fileId = (e.parameter && e.parameter.fileId) || '';
+    importRTOMasterFromDrive(fileId);
+    var ss = SpreadsheetApp.openById(CONFIG.SHEET_RTO_MASTER);
+    var sheet = ss.getSheetByName('RTO');
+    var rows = Math.max(0, sheet.getLastRow() - 1);
+    return jsonOut_({ success: true, rtoRows: rows, sheetId: CONFIG.SHEET_RTO_MASTER });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/**
+ * ?action=createTestGrid&key=...&insurerId=OR&productType=TW
+ * Creates grid sheet + one Pan-India sample rate row for Rate Lookup smoke test.
+ */
+function handleCreateTestGridRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    var insurerId = (e.parameter && e.parameter.insurerId) || 'OR';
+    var productType = (e.parameter && e.parameter.productType) || 'TW';
+    var sheetId = createGridTemplate(insurerId, productType);
+    var sample = seedSampleGridRow_(sheetId, insurerId, productType);
+    return jsonOut_({
+      success: true,
+      gridSheetId: sheetId,
+      gridUrl: 'https://docs.google.com/spreadsheets/d/' + sheetId + '/edit',
+      sample: sample
+    });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/** Appends one Pan-India TW sample row if the active/data tab has only headers. */
+function seedSampleGridRow_(sheetId, insurerId, productType) {
+  var ss = SpreadsheetApp.openById(sheetId);
+  var sheet = ss.getSheets().filter(function (s) {
+    return s.getName() !== 'Sheet1' && s.getLastRow() >= 0;
+  })[0] || ss.getSheets()[0];
+  if (sheet.getLastRow() > 1) {
+    return { skipped: true, reason: 'data rows already present', tab: sheet.getName(), rows: sheet.getLastRow() - 1 };
+  }
+  var insurerName = '';
+  for (var i = 0; i < INSURER_MASTER_DATA.length; i++) {
+    if (INSURER_MASTER_DATA[i][0] === insurerId) { insurerName = INSURER_MASTER_DATA[i][1]; break; }
+  }
+  var row = [];
+  for (var c = 0; c < GRID_HEADERS.length; c++) row.push('');
+  var idx = {};
+  GRID_HEADERS.forEach(function (h, i) { idx[h] = i; });
+  row[idx.insurance_company] = insurerName;
+  row[idx.insurer_code] = insurerId;
+  row[idx.scheme_name] = 'APS_TEST';
+  row[idx.product_type] = productType;
+  row[idx.product_sub_type] = '1+1';
+  row[idx.product_category] = 'Motor';
+  row[idx.effective_from_date] = '01-04-2025';
+  row[idx.effective_to_date] = '31-03-2027';
+  row[idx.vehicle_age_band] = 'New';
+  row[idx.fuel_type] = 'Petrol';
+  row[idx.vehicle_cc_lower_limit] = 0;
+  row[idx.vehicle_cc_upper_limit] = 9999;
+  row[idx.rto_list] = 'PAN INDIA';
+  row[idx.pi_rate] = 10;
+  row[idx.pi_rate_on] = 'NET';
+  row[idx.po_rate] = 8;
+  row[idx.po_rate_on] = 'NET';
+  sheet.appendRow(row);
+  SpreadsheetApp.flush();
+  return { skipped: false, tab: sheet.getName(), piRate: 10, poRate: 8, rto: 'PAN INDIA' };
+}
+
+/** ?action=setupArchives&key=... — create Grid Archive subfolders per active insurer */
+function handleSetupArchivesRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    return jsonOut_({ success: true, archives: setupGridArchiveFolders() });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/** ?action=setupTriggers&key=... — wire archiveLog + sendNoMatchReport triggers */
+function handleSetupTriggersRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    return jsonOut_({ success: true, triggers: setupTriggers() });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/** ?action=createAllGrids&key=... — one grid sheet per active insurer × product tabs */
+function handleCreateAllGridsRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    return jsonOut_({ success: true, grids: createAllGridTemplates() });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/** ?action=importGrids&key=... — process all .xlsx in Grid Import folder */
+function handleImportGridsRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    var summary = importGridsFromFolder();
+    return jsonOut_({ success: true, summary: summary });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/** ?action=seedMasters&key=... — reseed Product/Insurer/Partner/Broker Config from code refs */
+function handleSeedMastersRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    var result = seedAllMastersFromRefs();
+    var prompts = null;
+    try { prompts = seedDefaultPrompts(); } catch (pe) { prompts = { error: pe.message }; }
+    return jsonOut_({ success: true, masters: result, prompts: prompts });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/** ?action=seedPartners&key=... — 3 test partners for payout tests */
+function handleSeedPartnersRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    var result = applyPartnerMasterSeed();
+    return jsonOut_({ success: true, partners: result.partners });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/** Replace Insurer Master rows with APS buyer GST details. ?action=updateInsurers&key=... */
+function handleUpdateInsurersRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) {
+    return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  }
+  try {
+    var result = applyApsInsurerBuyers();
+    var prompts = null;
+    try { prompts = seedDefaultPrompts(); } catch (pe) { prompts = { error: pe.message }; }
+    return jsonOut_({ success: true, insurers: result, prompts: prompts });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/** Smoke test: ?action=health — verifies Config sheet IDs are readable. */
+function handleHealthRequest_() {
+  try {
+    var cfg = getFormConfig();
+    return jsonOut_({
+      success: true,
+      insurerCount: (cfg.insurers || []).length,
+      productTypes: cfg.productTypes || [],
+      folderRoot: CONFIG.FOLDER_ROOT || '',
+      sheetInsurerMaster: CONFIG.SHEET_INSURER_MASTER || ''
+    });
+  } catch (err) {
+    return jsonOut_({
+      success: false,
+      error: err.message,
+      folderRoot: CONFIG.FOLDER_ROOT || '',
+      sheetInsurerMaster: CONFIG.SHEET_INSURER_MASTER || ''
+    });
+  }
+}
+
+/**
+ * One-shot remote setup for fresh deploys.
+ * GET ?action=bootstrap&key=...
+ * Uses existing CONFIG IDs when present; otherwise runs runSetup().
+ */
+function handleBootstrapRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) {
+    return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  }
+
+  var ids;
+  var setupSource = 'runSetup';
+  if (CONFIG.FOLDER_ROOT && CONFIG.SHEET_INSURER_MASTER && CONFIG.SHEET_PRODUCT_MASTER) {
+    setupSource = 'config';
+    ids = {
+      folders: {
+        ROOT: CONFIG.FOLDER_ROOT,
+        MASTERS: CONFIG.FOLDER_MASTERS,
+        CONFIG: '',
+        GRIDS: CONFIG.FOLDER_GRIDS,
+        GRID_IMPORT: CONFIG.FOLDER_GRID_IMPORT,
+        GRID_ARCHIVE: CONFIG.FOLDER_GRID_ARCHIVE,
+        INPUT: CONFIG.FOLDER_INPUT,
+        OUTPUT: CONFIG.FOLDER_OUTPUT,
+        STATEMENTS: CONFIG.FOLDER_STATEMENTS,
+        INVOICES: CONFIG.FOLDER_INVOICES,
+        INVOICES_PARTNER: CONFIG.FOLDER_INVOICES_PARTNER,
+        INVOICES_INSURER: CONFIG.FOLDER_INVOICES_INSURER,
+        RECONCILIATION: CONFIG.FOLDER_RECONCILIATION,
+        BACKUP: CONFIG.FOLDER_BACKUP,
+        LOG: CONFIG.FOLDER_LOG
+      },
+      sheets: {
+        PRODUCT_MASTER: CONFIG.SHEET_PRODUCT_MASTER,
+        RTO_MASTER: CONFIG.SHEET_RTO_MASTER,
+        INSURER_MASTER: CONFIG.SHEET_INSURER_MASTER,
+        BROKER_CONFIG: CONFIG.SHEET_BROKER_CONFIG,
+        PARTNER_MASTER: CONFIG.SHEET_PARTNER_MASTER,
+        LOG: CONFIG.SHEET_LOG,
+        RECONCILIATION: CONFIG.SHEET_RECONCILIATION
+      }
+    };
+  } else {
+    ids = JSON.parse(runSetup());
+  }
+
+  var prompts = null;
+  try { prompts = seedDefaultPrompts(); } catch (pe) { prompts = { error: pe.message }; }
+
+  var props = PropertiesService.getScriptProperties();
+  var rateKey = props.getProperty('RATE_API_KEY');
+  var gridKey = props.getProperty('GRID_RUN_API_KEY');
+  if (!rateKey) {
+    rateKey = Utilities.getUuid().replace(/-/g, '');
+    props.setProperty('RATE_API_KEY', rateKey);
+  }
+  if (!gridKey) {
+    gridKey = Utilities.getUuid().replace(/-/g, '');
+    props.setProperty('GRID_RUN_API_KEY', gridKey);
+  }
+
+  var flat = {};
+  Object.keys(ids.folders || {}).forEach(function (k) { flat['FOLDER_' + k] = ids.folders[k]; });
+  Object.keys(ids.sheets || {}).forEach(function (k) { flat['SHEET_' + k] = ids.sheets[k]; });
+
+  var formCheck = null;
+  try {
+    var cfg = getFormConfig();
+    formCheck = { insurerCount: (cfg.insurers || []).length, productTypes: cfg.productTypes || [] };
+  } catch (fe) {
+    formCheck = { error: fe.message };
+  }
+
+  return jsonOut_({
+    success: true,
+    setupSource: setupSource,
+    ids: flat,
+    folders: ids.folders,
+    sheets: ids.sheets,
+    rootFolderUrl: 'https://drive.google.com/drive/folders/' + (ids.folders.ROOT || ''),
+    rateApiKey: rateKey,
+    gridRunApiKey: gridKey,
+    prompts: prompts,
+    formCheck: formCheck
+  });
+}
+
+function jsonOut_(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/** Run once from editor/clasp to ensure Main OAuth + optional property scaffolding. */
+function authorizeMainProperties() {
+  var props = PropertiesService.getScriptProperties();
+  if (!props.getProperty('RATE_API_KEY')) {
+    props.setProperty('RATE_API_KEY', Utilities.getUuid().replace(/-/g, ''));
+  }
+  if (!props.getProperty('GRID_RUN_API_KEY')) {
+    props.setProperty('GRID_RUN_API_KEY', Utilities.getUuid().replace(/-/g, ''));
+  }
+  SpreadsheetApp.openById(CONFIG.SHEET_INSURER_MASTER).getName();
+  return {
+    ok: true,
+    hasClaude: !!props.getProperty('CLAUDE_API_KEY'),
+    hasRateKey: !!props.getProperty('RATE_API_KEY'),
+    hasGridKey: !!props.getProperty('GRID_RUN_API_KEY')
+  };
 }
 
 /**
@@ -388,11 +769,13 @@ function getFormConfig() {
   try {
     var insurers = getSheetDataAsObjects(CONFIG.SHEET_INSURER_MASTER, 'Insurers');
     var insurerList = insurers
-      .filter(function(r) { return r.active === 'Y'; })
+      .filter(function(r) { return String(r.active || '').trim().toUpperCase() === 'Y'; })
       .map(function(r) { return { id: r.insurer_id, name: r.insurer_name }; });
 
     var products = getSheetDataAsObjects(CONFIG.SHEET_PRODUCT_MASTER, 'Motor');
-    var activeProducts = products.filter(function(r) { return r.active === 'Y'; });
+    var activeProducts = products.filter(function(r) {
+      return String(r.active || '').trim().toUpperCase() === 'Y';
+    });
 
     var seenTypes = {};
     var productTypes = [];
@@ -676,19 +1059,39 @@ function lookupRate(params) {
  */
 function findInsurerGridSheet(insurerId) {
   try {
-    var insurers = getSheetDataAsObjects(CONFIG.SHEET_INSURER_MASTER, 'Insurers');
-    var insurer  = null;
-    for (var i = 0; i < insurers.length; i++) {
-      if (insurers[i].insurer_id === insurerId) { insurer = insurers[i]; break; }
-    }
-    if (!insurer) throw new Error('Insurer not found in master: ' + insurerId);
+    var id = (insurerId || '').toString().trim();
+    if (!id) throw new Error('insurerId is blank');
 
-    var fileName = insurer.insurer_name + ' Grid';
-    var fileId   = findFileInFolder(CONFIG.FOLDER_GRIDS, fileName);
-    if (!fileId) {
-      fileId = findFileInFolder(CONFIG.FOLDER_GRIDS, insurerId + ' Grid');
+    // 1. Prefer Insurer Master name → "[name] Grid"
+    try {
+      var insurers = getSheetDataAsObjects(CONFIG.SHEET_INSURER_MASTER, 'Insurers');
+      for (var i = 0; i < insurers.length; i++) {
+        if (insurers[i].insurer_id === id) {
+          var byName = findFileInFolder(CONFIG.FOLDER_GRIDS, insurers[i].insurer_name + ' Grid');
+          if (byName) return byName;
+          break;
+        }
+      }
+    } catch (masterErr) {
+      Logger.log('findInsurerGridSheet: master lookup skipped — ' + masterErr.message);
     }
-    return fileId; // null if not found
+
+    // 2. Exact "[CODE] Grid" (import creates this for non-master insurers)
+    var byCode = findFileInFolder(CONFIG.FOLDER_GRIDS, id + ' Grid');
+    if (byCode) return byCode;
+
+    // 3. Scan Grids folder for any file name containing the code
+    var folder = DriveApp.getFolderById(CONFIG.FOLDER_GRIDS);
+    var files = folder.getFiles();
+    var codeLower = id.toLowerCase();
+    while (files.hasNext()) {
+      var f = files.next();
+      var n = f.getName().toLowerCase();
+      if (n.indexOf(codeLower) !== -1 && n.indexOf('grid') !== -1) {
+        return f.getId();
+      }
+    }
+    return null;
   } catch (e) {
     throw new Error('findInsurerGridSheet failed [' + insurerId + ']: ' + e.message);
   }
@@ -805,11 +1208,11 @@ function filterByRTO(rows, colIdx, normRTO) {
   return rows.filter(function(row) {
     var rtoList = row[colIdx.rto_list];
     if (!rtoList) return false;
-    var rtoListStr = rtoList.toString().trim();
+    var rtoListStr = rtoList.toString().replace(/\([^)]*\)/g, '').trim();
     if (rtoListStr === '' || rtoListStr.toLowerCase() === 'all') return false;
-    var codes = rtoListStr.split(/[,|]/).map(function(c) {
+    var codes = rtoListStr.split(/[,|;]/).map(function(c) {
       return normaliseRTO(c.trim());
-    });
+    }).filter(function(c) { return !!c; });
     return codes.indexOf(normRTO) !== -1;
   });
 }

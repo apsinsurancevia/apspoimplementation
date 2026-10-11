@@ -1,0 +1,38 @@
+broker_value,caliber_insurer_id,notes
+OR,OR,Direct match
+ORIENTAL,OR,Alternate label
+The Oriental Insurance Co Ltd,OR,Full name variant
+Oriental,OR,Short name variant
+NIC,NIC,Direct match
+NATIONAL,NIC,Alternate label
+National Insurance,NIC,Short name variant
+UIIC,UIIC,Direct match
+UNITED INDIA,UIIC,Alternate label
+United India Insurance,UIIC,Short name variant
+USGI,USGI,Direct match
+UNIV. SOMPO,USGI,Rate card label
+Universal Sompo,USGI,Short name variant
+TATA AIG,TATA,Rate card label
+TATA,TATA,Short label
+Tata AIG,TATA,Mixed case variant
+BAJAJ,BAJAJ,Direct match
+Bajaj Allianz,BAJAJ,Short name variant
+GO,GO,Direct match
+Go Digit,GO,Short name variant
+GO DIGIT,GO,Uppercase variant
+INDUSIND,INDUSIND,Direct match
+IND,INDUSIND,Rate card short label
+IndusInd,INDUSIND,Mixed case variant
+NIA,NIA,Direct match
+NEW INDIA,NIA,Alternate label
+New India,NIA,Short name variant
+ICICI,ICICI,Direct match
+ICICI LOMBARD,ICICI,Full name variant
+ICICI Lombard,ICICI,Mixed case variant
+SBI,SBI,Direct match
+SBI GENERAL,SBI,Alternate label
+SBI General,SBI,Mixed case variant
+KOTAK,KOTAK,Direct match
+ZURICH KOTAK,KOTAK,Full name variant
+Zurich Kotak,KOTAK,Mixed case variant
+Kotak,KOTAK,Short name variant

@@ -1,7 +1,22 @@
 .clasp.json
+**/.clasprc.json
+.clasprc.json
 *.key
 *.env
 .env
 node_modules/
 Thumbs.db
 .DS_Store
+
+# Local archive of pre-main APS work
+Old_Code/
+
+# Local deploy/runtime artifacts (secrets / machine-specific)
+*.local.json
+*.local.txt
+deploy_ids.local.txt
+deploy_bootstrap_result.local.json
+deploy_progress.local.txt
+CaliberPO_Setup.xlsx
+credentials.json
+token.json

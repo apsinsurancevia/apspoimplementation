@@ -74,19 +74,163 @@ var PRODUCT_MASTER_DATA = [
 // ── INSURER MASTER SEED DATA ──────────────────────────────────────────────────
 
 var INSURER_MASTER_DATA = [
-  ['OR','THE ORIENTAL INSURANCE CO LTD','[GSTIN]','DELHI','DL','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
-  ['NIC','NATIONAL INSURANCE CO LTD','[GSTIN]','WEST BENGAL','WB','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
-  ['UIIC','UNITED INDIA INSURANCE CO LTD','[GSTIN]','TAMILNADU','TN','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
-  ['USGI','UNIVERSAL SOMPO GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
-  ['TATA','TATA AIG GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
-  ['BAJAJ','BAJAJ ALLIANZ GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
-  ['GO','GO DIGIT GENERAL INSURANCE LTD','[GSTIN]','KARNATAKA','KA','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
-  ['INDUSIND','INDUSIND GENERAL INSURANCE CO LTD','[GSTIN]','[STATE]','[CODE]','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
-  ['NIA','THE NEW INDIA ASSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
-  ['ICICI','ICICI LOMBARD GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
-  ['KOTAK','ZURICH KOTAK GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
-  ['SBIG','SBI GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y']
+  // APS buyer GST roster (live deploy). Codes aligned with upstream where possible (SBIG = SBI).
+  ['GO','Go Digit General Insurance Limited','09AACCO4128Q1ZY','UTTAR PRADESH','09','1st Floor, Halwasiyas Commerce House, Habibullah Estate, 11 Mahatma Gandhi Marg, Hazratganj, Pin: 226001','997131','','Y'],
+  ['ICICI','ICICI Lombard General Insurance Co Ltd','23AAACI7904G1ZV','MADHYA PRADESH','23','5th Floor, Maple High Street, Opposite Aashima Mall, Hoshangabad Road, Bhopal, Pin: 462026','997131','','Y'],
+  ['INDUSIND','IndusInd General Insurance Company Limited','27AABCR6747B1ZG','MAHARASHTRA','27','119, Ayodhya Building, Near Bajaj Nagar Chowk, Behind Akruti Furniture, Bajaj Nagar, Nagpur – 440010','997131','','Y'],
+  ['NIC','National Insurance Company Limited','09AAACN9967E1Z1','UTTAR PRADESH','09','C-7/34, Goras Building, Lahurabir, Varanasi, Pin: 221001','997131','','Y'],
+  ['TATA','Tata AIG General Insurance Co Ltd','09AABCT3518Q1ZU','UTTAR PRADESH','09','Plot No E-1, 1st and 2nd Floor, Sector-8, Noida, District Gautam Budh Nagar, Noida – 201301','997131','','Y'],
+  ['SBIG','SBI General Insurance Company Ltd','23AAMCS8857L1ZK','MADHYA PRADESH','23','2nd Floor, State Bank of India TT Nagar Main Branch Building, New Market, Bhopal','997131','','Y'],
+  ['NIA','The New India Assurance Co Ltd','23AAACN4165C1ZZ','MADHYA PRADESH','23','313-316, Shekhar Central, New Palasia Square, Indore, 452001','997131','','Y'],
+  ['OR','The Oriental Insurance Company Limited','23AAACT0627R4Z4','MADHYA PRADESH','23','Ida Building, 4th Floor, 7, Race Course Road, Indore','997131','','Y'],
+  ['USGI','Universal Sompo General Insurance Company Limited','23AAACU8917F1ZE','MADHYA PRADESH','23','M 12 to M 16, Part Commerce House, 7 Race Course Road, R.S. Bhandari Marg, Indore - 452001','997131','','Y'],
+  ['KOTAK','Zurich Kotak General Insurance Company (India) Limited','07AAFCK7016C1ZV','DELHI','07','H 78, 23 Himalaya House, 7th Floor, KG Marg, New Delhi -110001','997131','','Y'],
+  ['UIIC','UNITED INDIA INSURANCE CO LTD','[GSTIN]','TAMILNADU','TN','[ADDRESS]','997131','','Y'],
+  ['BAJAJ','BAJAJ ALLIANZ GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','','Y']
 ];
+
+/**
+ * Overwrites Insurer Master "Insurers" tab with APS buyer GST roster.
+ * Safe to re-run. Returns { rows: N }.
+ */
+function applyApsInsurerBuyers() {
+  if (!CONFIG.SHEET_INSURER_MASTER) {
+    throw new Error('CONFIG.SHEET_INSURER_MASTER is blank');
+  }
+  var ss = SpreadsheetApp.openById(CONFIG.SHEET_INSURER_MASTER);
+  var sheet = ss.getSheetByName('Insurers') || ss.getSheets()[0];
+  if (sheet.getName() !== 'Insurers') sheet.setName('Insurers');
+
+  var headers = [
+    'insurer_id','insurer_name','insurer_gstin','insurer_state','insurer_state_code',
+    'insurer_address','sac_code','spoc_email','active'
+  ];
+  sheet.clearContents();
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  sheet.getRange(2, 1, INSURER_MASTER_DATA.length, headers.length).setValues(INSURER_MASTER_DATA);
+  SpreadsheetApp.flush();
+  Logger.log('applyApsInsurerBuyers: wrote ' + INSURER_MASTER_DATA.length + ' insurers');
+  return { rows: INSURER_MASTER_DATA.length };
+}
+
+/**
+ * Overwrites Product Master Motor tab with PRODUCT_MASTER_DATA (50 rows).
+ * Safe to re-run. Returns { rows: N }.
+ */
+function applyProductMasterSeed() {
+  if (!CONFIG.SHEET_PRODUCT_MASTER) {
+    throw new Error('CONFIG.SHEET_PRODUCT_MASTER is blank');
+  }
+  var ss = SpreadsheetApp.openById(CONFIG.SHEET_PRODUCT_MASTER);
+  var headers = ['product_vertical','product_type','product_sub_type','product_sub_sub_type','policy_type','active'];
+  var sheet = ss.getSheetByName('Motor') || ss.getSheets()[0];
+  if (sheet.getName() !== 'Motor') sheet.setName('Motor');
+  sheet.clearContents();
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  sheet.getRange(2, 1, PRODUCT_MASTER_DATA.length, headers.length).setValues(PRODUCT_MASTER_DATA);
+  SpreadsheetApp.flush();
+  Logger.log('applyProductMasterSeed: wrote ' + PRODUCT_MASTER_DATA.length + ' products');
+  return { rows: PRODUCT_MASTER_DATA.length };
+}
+
+/**
+ * Reseeds Broker Config mapping tabs from seed arrays (does not wipe Prompts/Counters values).
+ * Safe to re-run. Returns counts per tab.
+ */
+function applyBrokerConfigSeed() {
+  if (!CONFIG.SHEET_BROKER_CONFIG) {
+    throw new Error('CONFIG.SHEET_BROKER_CONFIG is blank');
+  }
+  var ss = SpreadsheetApp.openById(CONFIG.SHEET_BROKER_CONFIG);
+
+  function writeTab_(name, headers, data) {
+    var sheet = ss.getSheetByName(name);
+    if (!sheet) {
+      sheet = ss.insertSheet(name);
+    }
+    sheet.clearContents();
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    if (data.length) {
+      sheet.getRange(2, 1, data.length, headers.length).setValues(data);
+    }
+    return data.length;
+  }
+
+  var result = {
+    fieldMapping: writeTab_('Field_Mapping',
+      ['broker_field','standard_field','transform','notes'], FIELD_MAPPING_DATA),
+    insurerCodeMap: writeTab_('Insurer_Code_Map',
+      ['broker_value','caliber_insurer_id','notes'], INSURER_CODE_MAP_DATA),
+    productMap: writeTab_('Product_Map',
+      ['broker_field','broker_value','caliber_field','caliber_value','notes'], PRODUCT_MAP_DATA),
+    derivationRules: writeTab_('Derivation_Rules',
+      ['rule_type','keyword','derived_value','notes'], DERIVATION_RULES_DATA)
+  };
+
+  // Ensure Counters exist; do not reset values if already present
+  var ctr = ss.getSheetByName('Counters');
+  if (!ctr) {
+    ctr = ss.insertSheet('Counters');
+    ctr.getRange(1, 1, 1, 2).setValues([['counter_name','current_value']]);
+    ctr.getRange(2, 1, 2, 2).setValues([
+      ['PARTNER_INVOICE_COUNTER', 0],
+      ['INSURER_INVOICE_COUNTER', 0]
+    ]);
+    result.countersCreated = true;
+  } else {
+    result.countersCreated = false;
+  }
+
+  SpreadsheetApp.flush();
+  Logger.log('applyBrokerConfigSeed: ' + JSON.stringify(result));
+  return result;
+}
+
+/**
+ * Seeds 3 test partners covering No PAN / PAN only / PAN+GST cases.
+ * Safe to re-run (replaces data rows). Returns { partners: N }.
+ */
+function applyPartnerMasterSeed() {
+  if (!CONFIG.SHEET_PARTNER_MASTER) {
+    throw new Error('CONFIG.SHEET_PARTNER_MASTER is blank');
+  }
+  var ss = SpreadsheetApp.openById(CONFIG.SHEET_PARTNER_MASTER);
+  var sheet = ss.getSheetByName('Partners') || ss.getSheets()[0];
+  if (sheet.getName() !== 'Partners') sheet.setName('Partners');
+
+  var headers = [
+    'posp_id','posp_name','dealer_name','manager','rm',
+    'partner_email','partner_mobile','pan_number','gstin',
+    'partner_legal_name','partner_address','partner_state','partner_state_code','partner_pan',
+    'bank_account_name','bank_name','bank_branch','account_number','ifsc_code','account_type',
+    'tds_rate_override','active','statement_sent','utr_number','payment_date'
+  ];
+  sheet.clearContents();
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+
+  var partners = [
+    ['P001','Test Partner A (No PAN)','','','','','','','','','','','','','','','','','','','','Y','','',''],
+    ['P002','Test Partner B (PAN only)','','','','','','ABCDE1234F','','','','','','ABCDE1234F','','','','','','','','Y','','',''],
+    ['P003','Test Partner C (PAN+GST)','','','','','','FGHIJ5678K','23AAAAA0000A1Z5','','','MADHYA PRADESH','23','FGHIJ5678K','','','','','','','','Y','','','']
+  ];
+  sheet.getRange(2, 1, partners.length, headers.length).setValues(partners);
+  SpreadsheetApp.flush();
+  Logger.log('applyPartnerMasterSeed: wrote ' + partners.length + ' partners');
+  return { partners: partners.length };
+}
+
+/**
+ * Reseed Product / Insurer / Partner / Broker Config masters from code references.
+ * Does not touch RTO (use importRTOMasterFromDrive). Safe to re-run.
+ */
+function seedAllMastersFromRefs() {
+  return {
+    products: applyProductMasterSeed(),
+    insurers: applyApsInsurerBuyers(),
+    partners: applyPartnerMasterSeed(),
+    brokerConfig: applyBrokerConfigSeed()
+  };
+}
 
 // ── FIELD MAPPING SEED DATA ───────────────────────────────────────────────────
 
@@ -153,6 +297,7 @@ var INSURER_CODE_MAP_DATA = [
   ['ICICI LOMBARD','ICICI','Uppercase variant'],
   ['IL','ICICI','Rate card short label'],
   ['KOTAK','KOTAK','Direct match'],
+  ['Kotak','KOTAK','Short name variant'],
   ['Kotak General','KOTAK','Short name variant'],
   ['KOTAK GENERAL','KOTAK','Uppercase variant'],
   ['Kotak Mahindra General','KOTAK','Former full name variant'],
@@ -161,6 +306,7 @@ var INSURER_CODE_MAP_DATA = [
   ['Zurich Kotak General Insurance','KOTAK','Current full name'],
   ['ZKGI','KOTAK','GST / rate card abbreviation'],
   ['SBIG','SBIG','Direct match'],
+  ['SBI','SBIG','APS short code → SBIG'],
   ['SBI General','SBIG','Short name variant'],
   ['SBI GENERAL','SBIG','Uppercase variant'],
   ['SBI General Insurance','SBIG','Full name variant'],
@@ -417,9 +563,32 @@ function runSetup() {
 // ── FOLDER CREATION ───────────────────────────────────────────────────────────
 
 function createFolderStructure_() {
-  // Use the folder that contains this script — works for every deployment
-  var scriptFile = DriveApp.getFileById(ScriptApp.getScriptId());
-  var root = scriptFile.getParents().next();
+  // Prefer an existing CONFIG root, then script parent folder, then create CaliberPO.
+  var root;
+  if (CONFIG.FOLDER_ROOT) {
+    try {
+      root = DriveApp.getFolderById(CONFIG.FOLDER_ROOT);
+      Logger.log('Using CONFIG.FOLDER_ROOT');
+    } catch (e) {
+      Logger.log('CONFIG.FOLDER_ROOT not usable: ' + e.message);
+    }
+  }
+  if (!root) {
+    try {
+      var scriptFile = DriveApp.getFileById(ScriptApp.getScriptId());
+      var parents = scriptFile.getParents();
+      if (parents.hasNext()) {
+        root = parents.next();
+      }
+    } catch (e) {
+      Logger.log('Script file not in Drive tree: ' + e.message);
+    }
+  }
+  if (!root) {
+    var existing = DriveApp.getRootFolder().getFoldersByName('CaliberPO');
+    root = existing.hasNext() ? existing.next() : DriveApp.createFolder('CaliberPO');
+    Logger.log('Created/using Drive root folder CaliberPO');
+  }
   Logger.log('Root folder: ' + root.getName() + ' (' + root.getId() + ')');
 
   var folders = {
@@ -967,21 +1136,43 @@ function importRTOMaster(csvData) {
       throw new Error('Could not parse CSV headers. Ensure the first row contains column names.');
     }
     var dataRows = rows.slice(1);
+    var canonical = headers.indexOf('rto_code') !== -1 && headers.indexOf('rto_id') !== -1;
 
-    var rtoIdx = headers.indexOf('VehicleCity_RTOCode');
-    var stateIdx = headers.indexOf('State_Name');
-    var cityIdx = headers.indexOf('RTO_City');
-    var idIdx = headers.indexOf('VehicleCity_Id');
-
-    var normalised = dataRows.map(function(row) {
-      var rawCode = row[rtoIdx] || '';
-      var normCode = normaliseRTOCode_(rawCode);
-      var state = (row[stateIdx] || '')
-        .replace('PUBJAB', 'PUNJAB')
-        .replace('ORISSA', 'ODISHA');
-      var stateCode = normCode.substring(0, 2);
-      return [row[idIdx], row[cityIdx], state, normCode, stateCode];
-    });
+    var normalised;
+    if (canonical) {
+      var idIdxC = headers.indexOf('rto_id');
+      var cityIdxC = headers.indexOf('rto_city');
+      var stateIdxC = headers.indexOf('state_name');
+      var rtoIdxC = headers.indexOf('rto_code');
+      var stateCodeIdxC = headers.indexOf('state_code');
+      normalised = dataRows.map(function(row) {
+        var normCode = normaliseRTOCode_(row[rtoIdxC] || '');
+        var state = (row[stateIdxC] || '')
+          .replace('PUBJAB', 'PUNJAB')
+          .replace('ORISSA', 'ODISHA');
+        var stateCode = (stateCodeIdxC !== -1 && row[stateCodeIdxC])
+          ? String(row[stateCodeIdxC]).trim().toUpperCase()
+          : normCode.substring(0, 2);
+        return [row[idIdxC], row[cityIdxC], state, normCode, stateCode];
+      });
+    } else {
+      var rtoIdx = headers.indexOf('VehicleCity_RTOCode');
+      var stateIdx = headers.indexOf('State_Name');
+      var cityIdx = headers.indexOf('RTO_City');
+      var idIdx = headers.indexOf('VehicleCity_Id');
+      if (rtoIdx === -1 || idIdx === -1) {
+        throw new Error('CSV headers not recognised. Expected rto_id/rto_code or VehicleCity_Id/VehicleCity_RTOCode.');
+      }
+      normalised = dataRows.map(function(row) {
+        var rawCode = row[rtoIdx] || '';
+        var normCode = normaliseRTOCode_(rawCode);
+        var state = (row[stateIdx] || '')
+          .replace('PUBJAB', 'PUNJAB')
+          .replace('ORISSA', 'ODISHA');
+        var stateCode = normCode.substring(0, 2);
+        return [row[idIdx], row[cityIdx], state, normCode, stateCode];
+      });
+    }
 
     if (sheet.getLastRow() > 1) {
       sheet.getRange(2, 1, sheet.getLastRow() - 1, 5).clearContent();
@@ -1333,6 +1524,7 @@ function seedDefaultPrompts() {
     SpreadsheetApp.flush();
     Logger.log('seedDefaultPrompts: ' + added + ' added, ' + updated + ' updated');
     Logger.log('Refine each prompt once you have a sample statement from that insurer.');
+    return { added: added, updated: updated, insurerCount: insurerIds.length };
 
   } catch (e) {
     Logger.log('seedDefaultPrompts failed: ' + e.message);
@@ -1485,10 +1677,23 @@ function createGridTemplate(insurerId, productType) {
  * Usage: createAllGridTemplates()
  */
 function createAllGridTemplates() {
-  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI','KOTAK','SBIG'];
-  var productTypes = ['TW','Pvt Car','GCV','PCV','Tractor']; // Tractor → MiscD_26-27
+  // Prefer live Insurer Master; fall back to seed list
+  var insurerIds = [];
+  try {
+    var insurers = getSheetDataAsObjects(CONFIG.SHEET_INSURER_MASTER, 'Insurers');
+    insurers.forEach(function(ins) {
+      if (ins.active === 'Y' && ins.insurer_id) insurerIds.push(String(ins.insurer_id).trim());
+    });
+  } catch (e) { /* fall through */ }
+  if (!insurerIds.length) {
+    for (var i = 0; i < INSURER_MASTER_DATA.length; i++) {
+      if (INSURER_MASTER_DATA[i][8] === 'Y') insurerIds.push(INSURER_MASTER_DATA[i][0]);
+    }
+  }
+  // One MiscD tab covers Tractor + Construction Eqpt
+  var productTypes = ['TW','Pvt Car','GCV','PCV','Tractor'];
 
-  var total = 0, created = 0, skipped = 0;
+  var total = 0, created = 0, skipped = 0, errors = [];
 
   insurerIds.forEach(function(id) {
     productTypes.forEach(function(pt) {
@@ -1499,6 +1704,7 @@ function createAllGridTemplates() {
       } catch (e) {
         Logger.log('SKIP ' + id + '/' + pt + ': ' + e.message);
         skipped++;
+        errors.push(id + '/' + pt + ': ' + e.message);
       }
     });
   });
@@ -1506,6 +1712,7 @@ function createAllGridTemplates() {
   Logger.log('');
   Logger.log('=== createAllGridTemplates complete ===');
   Logger.log('Total: ' + total + ' | Created/Updated: ' + created + ' | Skipped: ' + skipped);
+  return { total: total, created: created, skipped: skipped, insurers: insurerIds.length, errors: errors };
 }
 
 /**
@@ -1624,6 +1831,7 @@ function setupGridArchiveFolders() {
   var insurers      = getSheetDataAsObjects(CONFIG.SHEET_INSURER_MASTER, 'Insurers');
 
   var created = 0, existing = 0, skipped = 0;
+  var folders = [];
 
   insurers.forEach(function(ins) {
     if (ins.active !== 'Y') { skipped++; return; }
@@ -1638,15 +1846,18 @@ function setupGridArchiveFolders() {
     if (existing_.hasNext()) {
       Logger.log('EXISTS  ' + folderName);
       existing++;
+      folders.push({ name: folderName, status: 'exists' });
     } else {
       archiveFolder.createFolder(folderName);
       Logger.log('CREATED ' + folderName);
       created++;
+      folders.push({ name: folderName, status: 'created' });
     }
   });
 
   Logger.log('');
   Logger.log('=== setupGridArchiveFolders: ' + created + ' created | ' + existing + ' existing | ' + skipped + ' skipped ===');
+  return { created: created, existing: existing, skipped: skipped, folders: folders };
 }
 
 /**
@@ -1697,11 +1908,25 @@ function getOrCreateInsurerArchiveFolder_(insurerCode) {
  */
 function importGridsFromFolder(folderId) {
   var srcFolder = DriveApp.getFolderById(folderId || CONFIG.FOLDER_GRID_IMPORT);
-  var files     = srcFolder.getFilesByType(MimeType.MICROSOFT_EXCEL);
+  // Collect .xlsx by mime and by extension (Drive mime can vary after API upload)
+  var seen = {};
+  var fileList = [];
+  function addFiles_(it) {
+    while (it.hasNext()) {
+      var f = it.next();
+      if (seen[f.getId()]) continue;
+      var n = f.getName().toLowerCase();
+      if (n.indexOf('.xlsx') === -1 && f.getMimeType() !== MimeType.MICROSOFT_EXCEL) continue;
+      seen[f.getId()] = true;
+      fileList.push(f);
+    }
+  }
+  addFiles_(srcFolder.getFilesByType(MimeType.MICROSOFT_EXCEL));
+  addFiles_(srcFolder.getFiles());
   var summary   = [];
 
-  while (files.hasNext()) {
-    var file  = files.next();
+  for (var fi = 0; fi < fileList.length; fi++) {
+    var file  = fileList[fi];
     var tempId = null;
     Logger.log('▶ Processing: ' + file.getName());
 
@@ -1750,7 +1975,9 @@ function importGridsFromFolder(folderId) {
         // Only rows whose date-period key exists in the incoming data are replaced.
         // Rows from other periods (e.g. Aug rates when importing Sep) are kept.
 
-        var srcData = srcTab.getRange(2, 1, lastRow - 1, 64).getValues();
+        var srcData = normalizeGridImportRows_(
+          srcTab.getRange(2, 1, lastRow - 1, Math.min(64, srcTab.getLastColumn())).getValues()
+        );
 
         // Collect all date-period keys present in the incoming data
         var srcPeriods = {};
@@ -1821,7 +2048,7 @@ function importGridsFromFolder(folderId) {
  */
 function convertExcelToSheet_(file) {
   var resource = {
-    title:    'TEMP_IMPORT__' + file.getName(),
+    name:     'TEMP_IMPORT__' + file.getName(),
     mimeType: MimeType.GOOGLE_SHEETS
   };
   var result = Drive.Files.create(resource, file.getBlob(), {fields: 'id'});
@@ -1885,4 +2112,81 @@ function normalizeDate_(val) {
   if (!val && val !== 0) return '';
   if (val instanceof Date) return Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd');
   return String(val).trim();
+}
+
+/**
+ * Normalises consolidated-extract quirks before writing into live grids:
+ *  - fraction rates 0.19 → 19
+ *  - vehicle labels in product_sub_type (2W/Scooter) → coverage subtypes (New 1+5 / 1+1)
+ *  - strip parenthetical junk from rto_list
+ */
+function normalizeGridImportRows_(rows) {
+  var rateIdx = [36, 38, 42, 44, 48, 51, 54, 57, 60, 63];
+  var vehicleSub = {
+    '2w': true, 'scooter': true, 'bike': true, 'ev': true,
+    'scooter/scooty': true, 'scooty': true, 'upto 350cc': true,
+    '4w': true, '3w': true, '4w taxi': true
+  };
+
+  return rows.map(function(src) {
+    var row = [];
+    for (var i = 0; i < 64; i++) row[i] = src[i] !== undefined && src[i] !== null ? src[i] : '';
+
+    rateIdx.forEach(function(i) {
+      var n = parseFloat(row[i]);
+      if (!isNaN(n) && n > 0 && n <= 1) {
+        row[i] = Math.round(n * 10000) / 100;
+      }
+    });
+
+    if (row[25]) {
+      var cleaned = String(row[25]).replace(/\([^)]*\)/g, '');
+      var codes = cleaned.split(/[,|;]/).map(function(p) { return p.trim(); })
+        .filter(function(p) { return /^[A-Za-z]{2}-?\d+/i.test(p); });
+      row[25] = codes.join(', ');
+    }
+
+    var pt = String(row[3] || '').trim();
+    var sub = String(row[4] || '').trim();
+    var subSub = String(row[5] || '').trim();
+    var blob = (sub + ' ' + subSub + ' ' + String(row[2] || '')).toLowerCase();
+    var subKey = sub.toLowerCase();
+
+    if (vehicleSub[subKey]) {
+      if (!subSub) row[5] = sub;
+      var mapped = mapExtractCoverageSubtype_(pt, blob);
+      if (mapped) row[4] = mapped;
+    } else if (pt === 'TW' && sub && !/^(new\s*\(|1\+1|saod|satp)/i.test(sub)) {
+      var mapped2 = mapExtractCoverageSubtype_(pt, blob);
+      if (mapped2) row[4] = mapped2;
+    }
+
+    return row;
+  });
+}
+
+function mapExtractCoverageSubtype_(productType, blob) {
+  var pt = (productType || '').trim();
+  if (pt === 'TW') {
+    if (blob.indexOf('5+5') !== -1) return 'New (5+5)';
+    if (blob.indexOf('1+5') !== -1 || blob.indexOf('fresh') !== -1 || blob.indexOf('bundled') !== -1) {
+      return 'New (1+5)';
+    }
+    if (blob.indexOf('saod') !== -1 || blob.indexOf('1+0') !== -1) return 'SAOD';
+    if (blob.indexOf('satp') !== -1) return 'SATP';
+    if (blob.indexOf('1+1') !== -1) return '1+1';
+    return 'New (1+5)';
+  }
+  if (pt === 'Pvt Car' || pt === 'PC') {
+    if (blob.indexOf('1+3') !== -1) return 'New (1+3)';
+    if (blob.indexOf('3+3') !== -1) return 'New (3+3)';
+    if (blob.indexOf('saod') !== -1) return 'SAOD';
+    if (blob.indexOf('satp') !== -1) return 'SATP';
+    return '1+1';
+  }
+  if (pt === 'GCV' || pt === 'PCV' || pt === 'Tractor' || pt === 'Construction Eqpt') {
+    if (blob.indexOf('satp') !== -1) return 'SATP';
+    return '1+1';
+  }
+  return null;
 }

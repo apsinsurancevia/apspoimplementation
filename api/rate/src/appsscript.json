@@ -4,16 +4,24 @@
     "libraries": [
       {
         "userSymbol": "GridEngine",
-        "libraryId": "1hLbGHigDew4npi8oyrkIuOd1wY5SnzgXXkAmle_c_-_MwJRuQu1JryRe",
-        "version": "0",
-        "developmentMode": true
+        "libraryId": "1zswvxtu96FtsICvO06_Rngtp9Kq-o7nMmu_igeKwnN61weruLxvgN_-c",
+        "version": "1"
       }
     ]
   },
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/script.scriptapp",
+    "https://www.googleapis.com/auth/script.external_request"
+  ],
   "webapp": {
     "executeAs": "USER_DEPLOYING",
     "access": "ANYONE_ANONYMOUS"
+  },
+  "executionApi": {
+    "access": "ANYONE"
   }
 }

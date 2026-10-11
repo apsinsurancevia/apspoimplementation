@@ -4,8 +4,8 @@
  * API key is NEVER stored here — set RATE_API_KEY in Script Properties.
  */
 var RATE_CONFIG = {
-  FOLDER_GRIDS:         '15CJn8xIZBSRBw-e-O8kxZyW0RP7yx2mh',
-  SHEET_INSURER_MASTER: '1GvECCDrVFsp_SXvlEZpL7hhO26sdADBVFQYdoTnRMZw',
+  FOLDER_GRIDS:         '125lwRE7R-NSNnHolBGIBA_z3kLm4-vT2',
+  SHEET_INSURER_MASTER: '1NKyVjVDPVb4jmVqbG7IbklLiBqYp1_hV0GRzYMDfBrc',
 
   // Cache TTLs (seconds)
   CACHE_TTL_INSURER_LIST: 900,    // 15 min — insurer master rarely changes

@@ -1,0 +1,4 @@
+posp_id,posp_name,dealer_name,manager,rm,partner_email,partner_mobile,pan_number,gstin,partner_legal_name,partner_address,partner_state,partner_state_code,partner_pan,bank_account_name,bank_name,bank_branch,account_number,ifsc_code,account_type,tds_rate_override,active,statement_sent,utr_number,payment_date
+P001,Test Partner A (No PAN),,,,,,,,,,,,,,,,,,,,Y,,,
+P002,Test Partner B (PAN only),,,,,,ABCDE1234F,,,,,,ABCDE1234F,,,,,,,,Y,,,
+P003,Test Partner C (PAN+GST),,,,,,FGHIJ5678K,23AAAAA0000A1Z5,,,MADHYA PRADESH,23,FGHIJ5678K,,,,,,,,Y,,,

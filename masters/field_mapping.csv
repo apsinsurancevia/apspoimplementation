@@ -1,0 +1,22 @@
+broker_field,standard_field,transform,notes
+Posp Id,partner_id,none,Join key to Partner Master and rate grid — critical
+Posp,partner_name,none,
+System Policy Uid,sys_ref_no,none,
+Policy Number,policy_no,none,
+Insurer,insurance_company,insurer_code_map,Full name to code via Insurer_Code_Map tab
+Product,product,none,
+Product Type,product_type,product_map,Via Product_Map tab
+Product Sub Type,product_sub_type,product_map,Via Product_Map tab
+Issue Date,policy_issue_date,date_format,Normalise to YYYY-MM-DD
+Business Type,business_type,none,New / Renewal — carried through
+Vehicle Rta,rto,rto_normalise,XX00 to XX-00 hyphenated format
+Model,vehicle_model,none,Used for sub-sub-type derivation
+Make Year,make_year,none,Integer year — for New/Old derivation
+Vehicle Fuel Type,vehicle_fuel_type,none,EV identification
+Vehicle Cc,vehicle_cc,none,Integer cc — for TW CC range matching
+Vehicle Gvw,vehicle_gvw,gvw_normalise,Normalise to tonnes per GVW_UNIT config
+Vehicle Seating Capacity,vehicle_seating,none,For PCV seating range matching
+Total Premium,gross_premium,none,Gross premium — fallback base
+Net Premium,net_premium,none,Primary commission base for TW
+Total Od Premium,od_premium,none,OD component — for OD-rate grids
+Total Tp Premium,tp_premium,none,TP component — for TP-rate grids

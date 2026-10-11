@@ -405,6 +405,8 @@ function setupTriggers() {
     var existingTriggers = ScriptApp.getProjectTriggers();
     var hasArchive  = false;
     var hasNoMatch  = false;
+    var created = [];
+    var existing = [];
 
     existingTriggers.forEach(function(trigger) {
       if (trigger.getHandlerFunction() === 'archiveLog')       hasArchive  = true;
@@ -418,8 +420,10 @@ function setupTriggers() {
         .atHour(1)
         .create();
       Logger.log('Trigger created: archiveLog — 1st of month at 01:00');
+      created.push('archiveLog');
     } else {
       Logger.log('Trigger already exists: archiveLog');
+      existing.push('archiveLog');
     }
 
     if (!hasNoMatch) {
@@ -430,11 +434,14 @@ function setupTriggers() {
         .atHour(8)
         .create();
       Logger.log('Trigger created: sendNoMatchReport — every Monday at 08:00');
+      created.push('sendNoMatchReport');
     } else {
       Logger.log('Trigger already exists: sendNoMatchReport');
+      existing.push('sendNoMatchReport');
     }
 
     Logger.log('setupTriggers complete');
+    return { created: created, existing: existing };
 
   } catch (e) {
     Logger.log('setupTriggers failed: ' + e.message);

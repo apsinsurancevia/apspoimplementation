@@ -67,6 +67,9 @@
 
 function doGet(e) {
   try {
+    if (e && e.parameter && String(e.parameter.action || '').toLowerCase() === 'bootstrap') {
+      return handleGridRunBootstrap_(e);
+    }
     if (e && e.parameter && e.parameter.api === 'true') return handleGridRunRequest_(e);
     return ContentService
       .createTextOutput(JSON.stringify({ success: false, error: 'Missing api=true parameter' }))
@@ -74,6 +77,33 @@ function doGet(e) {
   } catch (err) {
     return apiResp_({ success: false, error: err.message });
   }
+}
+
+function handleGridRunBootstrap_(e) {
+  var p = e.parameter || {};
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty('GRID_RUN_API_KEY') || '';
+  var bootKey = p.bootstrapKey || '';
+  if (existing && bootKey !== existing) {
+    return apiResp_({ success: false, error: 'bootstrapKey mismatch' });
+  }
+  if (p.GRID_RUN_API_KEY) props.setProperty('GRID_RUN_API_KEY', p.GRID_RUN_API_KEY);
+  if (p.FOLDER_GRIDS) props.setProperty('FOLDER_GRIDS', p.FOLDER_GRIDS);
+  if (p.SHEET_INSURER_MASTER) props.setProperty('SHEET_INSURER_MASTER', p.SHEET_INSURER_MASTER);
+  var cfg = getGridRunRuntimeConfig_();
+  return apiResp_({
+    success: true,
+    FOLDER_GRIDS: cfg.FOLDER_GRIDS,
+    SHEET_INSURER_MASTER: cfg.SHEET_INSURER_MASTER
+  });
+}
+
+function getGridRunRuntimeConfig_() {
+  var props = PropertiesService.getScriptProperties();
+  return {
+    FOLDER_GRIDS: props.getProperty('FOLDER_GRIDS') || GRIDRUN_CONFIG.FOLDER_GRIDS || '',
+    SHEET_INSURER_MASTER: props.getProperty('SHEET_INSURER_MASTER') || GRIDRUN_CONFIG.SHEET_INSURER_MASTER || ''
+  };
 }
 
 function handleGridRunRequest_(e) {
@@ -119,7 +149,8 @@ function handleGridRunRequest_(e) {
   if (missing.length) return apiResp_({ success: false, error: 'Missing required fields', missingFields: missing });
 
   // ── Find grid ───────────────────────────────────────────────────────────────
-  var gridSheetId = GridEngine.findInsurerGrid(params.insurerId, GRIDRUN_CONFIG.FOLDER_GRIDS, GRIDRUN_CONFIG.SHEET_INSURER_MASTER);
+  var cfg = getGridRunRuntimeConfig_();
+  var gridSheetId = GridEngine.findInsurerGrid(params.insurerId, cfg.FOLDER_GRIDS, cfg.SHEET_INSURER_MASTER);
   if (!gridSheetId) return apiResp_({ success: false, error: 'No grid found for insurer: ' + params.insurerId, matchStatus: 'NO_MATCH' });
 
   // ── Lookup + adjustments ────────────────────────────────────────────────────

@@ -83,7 +83,8 @@ var INSURER_MASTER_DATA = [
   ['GO','GO DIGIT GENERAL INSURANCE LTD','[GSTIN]','KARNATAKA','KA','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
   ['INDUSIND','INDUSIND GENERAL INSURANCE CO LTD','[GSTIN]','[STATE]','[CODE]','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
   ['NIA','THE NEW INDIA ASSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
-  ['ICICI','ICICI LOMBARD GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y']
+  ['ICICI','ICICI LOMBARD GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y'],
+  ['KOTAK','ZURICH KOTAK GENERAL INSURANCE CO LTD','[GSTIN]','MAHARASHTRA','MH','[ADDRESS]','997131','[SPOC_EMAIL]','Y']
 ];
 
 // ── FIELD MAPPING SEED DATA ───────────────────────────────────────────────────
@@ -149,7 +150,15 @@ var INSURER_CODE_MAP_DATA = [
   ['ICICI','ICICI','Direct match'],
   ['ICICI Lombard','ICICI','Short name variant'],
   ['ICICI LOMBARD','ICICI','Uppercase variant'],
-  ['IL','ICICI','Rate card short label']
+  ['IL','ICICI','Rate card short label'],
+  ['KOTAK','KOTAK','Direct match'],
+  ['Kotak General','KOTAK','Short name variant'],
+  ['KOTAK GENERAL','KOTAK','Uppercase variant'],
+  ['Kotak Mahindra General','KOTAK','Former full name variant'],
+  ['Zurich Kotak','KOTAK','Current rebranded name'],
+  ['ZURICH KOTAK','KOTAK','Current rebranded uppercase'],
+  ['Zurich Kotak General Insurance','KOTAK','Current full name'],
+  ['ZKGI','KOTAK','GST / rate card abbreviation']
 ];
 
 // ── PRODUCT MAP SEED DATA ─────────────────────────────────────────────────────
@@ -273,6 +282,15 @@ var STATEMENT_HEADERS_DATA = [
     'INSURED_CUSTOMER_NAME',
     'POLICY_START_DATE',
     'CSV format; filter TRANSACTION_STATUS — skip reversed/cancelled rows; ACTUAL_COMMISSION includes both OD (ACTUAL_COMPR_OD_COMM) and TP (ACTUAL_COMPR_TP_COMM) components'
+  ],
+  [
+    'KOTAK', 'csv', '', 1,
+    'POLICY NO',
+    'Total Commission',
+    'OUR SHARE OF PREMIUM GWP',
+    'CUSTOMER NAME',
+    'Policy/Endorsement Issue Date',
+    'Formerly Kotak General / Kotak Mahindra General, now Zurich Kotak General Insurance (ZKGI); Total Commission = OD/Basic commission + Motor TP commission + Terrisom commission (pre-TDS); Net Commission is post-TDS — do NOT use; TDS already deducted in Net Commission'
   ]
 ];
 
@@ -926,6 +944,22 @@ function seedDefaultPrompts() {
         'Mappings: policy_no = "PolicyNumber". ' +
         'insured_name = "InsuredName". premium_amount = "NET_PREMIUM". policy_date = "Month".',
 
+      'KOTAK':
+        'CSV file (comma-separated). Insurer is Zurich Kotak General Insurance (formerly Kotak General / Kotak Mahindra General). ' +
+        'Columns confirmed from actual statement: BRANCH CODE, BRANCH NAME, ZKGI GST NO, POLICY NO, Endorsement No, ' +
+        'ENDORSEMENT TYPE, Endorsement Reason, BUSINESS TYPE, Policy/Endorsement Issue Date, POLICY INCEPTION DATE, ' +
+        'Endorsement Effective Date, POLICY EXPIRY DATE, LOB NAME, PRODUCT NAME, CUSTOMER NAME, IMD CODE, IMD NAME, ' +
+        'IMD GSTIN No, PA TO OWNER DRIVER PREMIUM, ALL OTHER TP COVER PREMIUM, Terrorism Premium, ' +
+        'BASIC PREMIUM/OD PREMIUM, OUR SHARE OF PREMIUM GWP, GST Exempted Yes/No, TDS RATE ON COMM, ' +
+        'PRODUCT TYPE, OD %, TP %, Terr %, OD / Basic commission, Motor TP commission, Terrisom commission, ' +
+        'Total Commission, TDS Amt, CGST, SGST, IGST, Net Commission. ' +
+        'Mappings: policy_no = "POLICY NO". ' +
+        'brokerage_amount = "Total Commission" — this is the gross pre-TDS total (OD/Basic + TP + Terrorism combined). ' +
+        'Do NOT use "Net Commission" — that is post-TDS. ' +
+        'insured_name = "CUSTOMER NAME". premium_amount = "OUR SHARE OF PREMIUM GWP". ' +
+        'policy_date = "Policy/Endorsement Issue Date". ' +
+        'Skip rows where Total Commission is 0 or blank.',
+
       'ICICI':
         'CSV file (comma-separated). ' +
         'Columns confirmed from actual statement: AGENT_CATEGORY_NAME, AGENT_LICENSE_CODE, INTERMEDIARY_CODE, ' +
@@ -1137,7 +1171,7 @@ function createGridTemplate(insurerId, productType) {
  * Usage: createAllGridTemplates()
  */
 function createAllGridTemplates() {
-  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI'];
+  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI','KOTAK'];
   var productTypes = ['TW','Pvt Car','GCV','PCV','Tractor']; // Tractor → MiscD_26-27
 
   var total = 0, created = 0, skipped = 0;
@@ -1167,7 +1201,7 @@ function createAllGridTemplates() {
  * Usage: updateAllGridHeaders()
  */
 function updateAllGridHeaders() {
-  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI'];
+  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI','KOTAK'];
   var productTypes = ['TW','Pvt Car','GCV','PCV','Tractor'];
   var prefixMap    = { 'TW':'TW','Pvt Car':'PC','GCV':'GCV','PCV':'PCV','Tractor':'MiscD','Construction Eqpt':'MiscD' };
 
@@ -1215,7 +1249,7 @@ function updateAllGridHeaders() {
  * Usage: validateAllGrids()
  */
 function validateAllGrids() {
-  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI'];
+  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI','KOTAK'];
   var productTypes = ['TW','Pvt Car','GCV','PCV','Tractor'];
   var prefixMap    = { 'TW':'TW','Pvt Car':'PC','GCV':'GCV','PCV':'PCV','Tractor':'MiscD','Construction Eqpt':'MiscD' };
 

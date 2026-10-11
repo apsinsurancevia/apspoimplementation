@@ -224,7 +224,7 @@ var STATEMENT_HEADERS_DATA = [
     'Premium Amt',
     'Insured Name',
     'Policy Exp Dt',
-    'OD (Dep 31 - Motor) + TP (Dep 32 - Motor TP) per Policy No — sum both rows'
+    'Dep No differentiates OD (31 - Motor) from TP (32 - Motor TP) rows; sum Comm Amt and Premium Amt across both rows per Policy No; Terrsm Loading is terrorism premium info only — no separate terrorism commission column; Comm Amt is the all-in total'
   ],
   [
     'USGI', 'xlsx', 'MOTOR', 2,
@@ -975,12 +975,19 @@ function seedDefaultPrompts() {
         'Skip rows where Total_commission is 0 or blank.',
 
       'UIIC':
-        'Excel file, sheet name "Sheet1". Each policy appears as TWO rows — one for Motor OD (Dep No = "31 - Motor") ' +
-        'and one for Motor TP (Dep No = "32 - Motor TP"). ' +
-        'CRITICAL: Sum the two rows and return ONE element per policy_no. ' +
-        'policy_no = "Policy No". brokerage_amount = SUM of "Comm Amt" across both OD and TP rows for the same Policy No. ' +
+        'Excel file, sheet name "Sheet1". ' +
+        'Columns confirmed from actual statement: Name, Agt/Brk/Cor_Ag_Code, Dep No, Policy No, ' +
+        'Endorsement No, Insured Name, Policy Exp Dt, Premium Amt, Rate, Terrsm Loading, Comm Amt. ' +
+        'Each motor policy appears as TWO rows — one for Motor OD (Dep No = "31 - Motor") and one for ' +
+        'Motor TP (Dep No = "32 - Motor TP"). ' +
+        'CRITICAL: Sum both rows and return ONE element per Policy No. ' +
+        'Note on Terrsm Loading: this is the terrorism premium amount (informational only) — there is no ' +
+        'separate terrorism commission column; Comm Amt is the all-in total commission including any terrorism component. ' +
+        'policy_no = "Policy No". ' +
+        'brokerage_amount = SUM of "Comm Amt" across the OD and TP rows for the same Policy No. ' +
         'insured_name = "Insured Name". premium_amount = SUM of "Premium Amt" across both rows. ' +
-        'policy_date = "Policy Exp Dt".',
+        'policy_date = "Policy Exp Dt". ' +
+        'Skip rows where Comm Amt is 0 or blank.',
 
       'USGI':
         'Excel file with two sheets: "MOTOR" and "NON-MOTOR". Both sheets have one blank row above the header (header is row 2). ' +

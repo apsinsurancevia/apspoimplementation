@@ -247,6 +247,9 @@ function extractViaClaudeAPI(content, promptTemplate, contentType, mimeType) {
   try {
     var apiKey = PropertiesService.getScriptProperties()
       .getProperty('CLAUDE_API_KEY');
+    if (apiKey) {
+      apiKey = String(apiKey).replace(/^\s+|\s+$/g, '').replace(/^["']|["']$/g, '');
+    }
     if (!apiKey) {
       throw new Error(
         'CLAUDE_API_KEY not found in Script Properties. ' +

@@ -51,6 +51,9 @@ function doGet(e) {
     if (action === 'opsstatementrecon') {
       return handleOpsStatementReconRequest_(e);
     }
+    if (action === 'diagnoseclaude') {
+      return handleDiagnoseClaudeRequest_(e);
+    }
     if (action === 'validateallgrids') {
       return handleValidateAllGridsRequest_(e);
     }
@@ -399,6 +402,64 @@ function handleCompleteOpsGuideRequest_(e) {
   } catch (err) {
     return jsonOut_({ success: false, error: err.message, stack: err.stack });
   }
+}
+
+/**
+ * ?action=diagnoseClaude&key=...
+ * Reports masked CLAUDE_API_KEY shape, trims whitespace if needed, re-probes Anthropic.
+ */
+function handleDiagnoseClaudeRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+
+  var props = PropertiesService.getScriptProperties();
+  var raw = props.getProperty('CLAUDE_API_KEY') || '';
+  var trimmed = raw.replace(/^\s+|\s+$/g, '').replace(/^["']|["']$/g, '');
+  var info = {
+    present: !!raw,
+    length: raw.length,
+    trimmedLength: trimmed.length,
+    startsWithSkAnt: trimmed.indexOf('sk-ant-') === 0,
+    hadLeadingTrailingWhitespace: raw !== raw.replace(/^\s+|\s+$/g, ''),
+    hadWrappingQuotes: raw.length > 0 && (raw.charAt(0) === '"' || raw.charAt(0) === "'"),
+    prefix: trimmed ? trimmed.substring(0, 10) + '…' : '',
+    suffix: trimmed.length > 6 ? ('…' + trimmed.substring(trimmed.length - 4)) : ''
+  };
+
+  if (trimmed && trimmed !== raw) {
+    props.setProperty('CLAUDE_API_KEY', trimmed);
+    info.rewroteTrimmed = true;
+  } else {
+    info.rewroteTrimmed = false;
+  }
+
+  var probe = { ok: false, code: 0, body: '' };
+  if (trimmed) {
+    try {
+      var resp = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+        method: 'post',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': trimmed,
+          'anthropic-version': '2023-06-01'
+        },
+        payload: JSON.stringify({
+          model: CONFIG.CLAUDE_MODEL || 'claude-sonnet-4-6',
+          max_tokens: 16,
+          messages: [{ role: 'user', content: 'Reply with OK only' }]
+        }),
+        muteHttpExceptions: true
+      });
+      probe.code = resp.getResponseCode();
+      probe.ok = probe.code === 200;
+      probe.body = String(resp.getContentText() || '').substring(0, 280);
+    } catch (err) {
+      probe.error = err.message;
+    }
+  }
+
+  return jsonOut_({ success: true, key: info, probe: probe });
 }
 
 /** ?action=opsStatementRecon&key=... — retry Ops Guide steps 18–19 only */

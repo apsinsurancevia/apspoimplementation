@@ -654,6 +654,9 @@ function _opsFail_(detail, err) {
 /** Lightweight Anthropic auth check (does not extract a statement). */
 function _opsGuideProbeClaudeKey_() {
   var apiKey = PropertiesService.getScriptProperties().getProperty('CLAUDE_API_KEY');
+  if (apiKey) {
+    apiKey = String(apiKey).replace(/^\s+|\s+$/g, '').replace(/^["']|["']$/g, '');
+  }
   if (!apiKey) return { ok: false, error: 'CLAUDE_API_KEY not set in Script Properties' };
   try {
     var resp = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
@@ -760,8 +763,9 @@ function _opsGuideBuildCaliberSalesRows_() {
       90: '3000', 91: '2000', 92: '5000', 94: '5500', 111: 'SYS-APS-002'
     }),
     row({
+      // ROYAL PCV extract window is Sep-only — use 2026-09-15 so sample MATCHES
       0: 3, 1: 'ROYAL', 2: 'POL-ROYAL-001', 3: 'Motor', 4: 'PCV', 5: '1+1',
-      9: '2026-10-07', 10: 'Test Partner C', 11: 'P003', 24: 'New',
+      9: '2026-09-15', 10: 'Test Partner C', 11: 'P003', 24: 'New',
       30: '2023', 31: 'Petrol', 34: 'MP-09', 39: '3', 40: 'Auto',
       90: '4000', 91: '2000', 92: '6000', 94: '7000', 111: 'SYS-APS-003'
     })

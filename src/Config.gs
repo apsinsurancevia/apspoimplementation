@@ -90,6 +90,6 @@ const CONFIG = {
   EMAIL_BATCH_SIZE:         1400,    // Stay under Gmail 1,500/day limit
   VARIANCE_THRESHOLD:       10,      // Minimum variance in ₹ to report
   GVW_UNIT:                 "tonnes", // "tonnes" or "kg" — confirm per broker from source system
-  CURRENT_PERIOD:           "",      // Set to "YYYY-MM" at start of each month before running batch
+  CURRENT_PERIOD:           "2026-10", // Set to "YYYY-MM" at start of each month before running batch
 
 };

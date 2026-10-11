@@ -126,10 +126,17 @@ function applyApsInsurerBuyers() {
   ];
   sheet.clearContents();
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-  sheet.getRange(2, 1, INSURER_MASTER_DATA.length, headers.length).setValues(INSURER_MASTER_DATA);
+  var spocDefault = CONFIG.EMAIL_COORDINATOR || '';
+  var rows = INSURER_MASTER_DATA.map(function(r) {
+    var copy = r.slice();
+    // Fill blank / placeholder SPOC so statement dispatch has a recipient
+    if (!copy[7] || String(copy[7]).indexOf('[') === 0) copy[7] = spocDefault;
+    return copy;
+  });
+  sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
   SpreadsheetApp.flush();
-  Logger.log('applyApsInsurerBuyers: wrote ' + INSURER_MASTER_DATA.length + ' insurers');
-  return { rows: INSURER_MASTER_DATA.length };
+  Logger.log('applyApsInsurerBuyers: wrote ' + rows.length + ' insurers');
+  return { rows: rows.length };
 }
 
 /**
@@ -306,10 +313,11 @@ function applyPartnerMasterSeed() {
   sheet.clearContents();
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
 
+  var email = CONFIG.EMAIL_COORDINATOR || 'it@apsinsurancevia.in';
   var partners = [
-    ['P001','Test Partner A (No PAN)','','','','','','','','','','','','','','','','','','','','Y','','',''],
-    ['P002','Test Partner B (PAN only)','','','','','','ABCDE1234F','','','','','','ABCDE1234F','','','','','','','','Y','','',''],
-    ['P003','Test Partner C (PAN+GST)','','','','','','FGHIJ5678K','23AAAAA0000A1Z5','','','MADHYA PRADESH','23','FGHIJ5678K','','','','','','','','Y','','','']
+    ['P001','Test Partner A (No PAN)','Demo Dealer','','',email,'9999990001','','','','','','','','','','','','','','','Y','','',''],
+    ['P002','Test Partner B (PAN only)','Demo Dealer','','',email,'9999990002','ABCDE1234F','','','','','','ABCDE1234F','Test Partner B','ICICI Bank','Indore','656905601822','ICIC0006569','Savings','','Y','','',''],
+    ['P003','Test Partner C (PAN+GST)','Demo Dealer','','',email,'9999990003','FGHIJ5678K','23AAAAA0000A1Z5','Test Partner C Legal','68 Sundar Nagar Ext Indore','MADHYA PRADESH','23','FGHIJ5678K','Test Partner C','ICICI Bank','Indore','656905601823','ICIC0006569','Current','','Y','','','']
   ];
   sheet.getRange(2, 1, partners.length, headers.length).setValues(partners);
   SpreadsheetApp.flush();
@@ -377,6 +385,10 @@ var INSURER_CODE_MAP_DATA = [
   ['Tata AIG','TATA','Mixed case variant'],
   ['BAJAJ','BAJAJ','Direct match'],
   ['Bajaj Allianz','BAJAJ','Short name variant'],
+  ['Bajaj Allianz General Insurance','BAJAJ','Full name variant'],
+  ['ROYAL','ROYAL','APS short code'],
+  ['Royal Sundaram General Insurance Co Ltd','ROYAL','APS full name'],
+  ['Royal Sundaram','ROYAL','APS short name'],
   ['GO','GO','Direct match'],
   ['Go Digit','GO','Short name variant'],
   ['GO DIGIT','GO','Uppercase variant'],
@@ -466,10 +478,12 @@ var INSURER_CODE_MAP_DATA = [
 
 var PRODUCT_MAP_DATA = [
   ['Product Type','Two Wheeler','product_type','TW',''],
+  ['Product Type','TW','product_type','TW','Direct code'],
   ['Product Type','Tractor','product_type','Tractor','Misc D vertical'],
   ['Product Type','GCV','product_type','GCV',''],
   ['Product Type','PCV','product_type','PCV',''],
   ['Product Type','Private Car','product_type','Pvt Car',''],
+  ['Product Type','Pvt Car','product_type','Pvt Car','Direct code'],
   ['Product Type','Car','product_type','Pvt Car','Short label variant'],
   ['Product Type','Commercial Vehicle','product_type','GCV','Default to GCV if unspecified'],
   ['Product Sub Type','Bike','product_sub_type','Scooter/Bike',''],
@@ -2079,47 +2093,54 @@ function updateAllGridHeaders() {
  * Usage: validateAllGrids()
  */
 function validateAllGrids() {
-  var insurerIds   = ['OR','NIC','UIIC','USGI','TATA','BAJAJ','GO','INDUSIND','NIA','ICICI','KOTAK','SBIG'];
-  var productTypes = ['TW','Pvt Car','GCV','PCV','Tractor'];
-  var prefixMap    = { 'TW':'TW','Pvt Car':'PC','GCV':'GCV','PCV':'PCV','Tractor':'MiscD','Construction Eqpt':'MiscD' };
+  var folder = DriveApp.getFolderById(CONFIG.FOLDER_GRIDS);
+  var files = folder.getFiles();
+  var passed = 0, failed = 0, missing = 0, checked = 0;
+  var details = [];
 
-  var now     = new Date();
-  var year    = now.getFullYear();
-  var month   = now.getMonth() + 1;
-  var fyStart = month >= 4 ? year : year - 1;
-  var fy      = String(fyStart).slice(2) + '-' + String(fyStart + 1).slice(2);
-
-  var passed = 0, failed = 0, missing = 0;
-
-  insurerIds.forEach(function(id) {
-    var insurerRow = null;
-    for (var i = 0; i < INSURER_MASTER_DATA.length; i++) {
-      if (INSURER_MASTER_DATA[i][0] === id) { insurerRow = INSURER_MASTER_DATA[i]; break; }
-    }
-    if (!insurerRow) { Logger.log('SKIP ' + id + ': not in INSURER_MASTER_DATA'); missing++; return; }
-
-    var sheetName = insurerRow[1] + ' Grid';
-    var folder    = DriveApp.getFolderById(CONFIG.FOLDER_GRIDS);
-    var files     = folder.getFilesByName(sheetName);
-    if (!files.hasNext()) { Logger.log('MISSING sheet: ' + sheetName); missing++; return; }
-
-    var ss = SpreadsheetApp.open(files.next());
-
-    productTypes.forEach(function(pt) {
-      var tabName = (prefixMap[pt] || pt) + '_' + fy;
-      var result  = validateGrid(ss.getId(), tabName);
+  while (files.hasNext()) {
+    var file = files.next();
+    if (file.getMimeType() !== MimeType.GOOGLE_SHEETS) continue;
+    if (file.getName().indexOf('Grid') === -1) continue;
+    var ss = SpreadsheetApp.open(file);
+    var sheets = ss.getSheets();
+    var tabCount = 0;
+    sheets.forEach(function(sh) {
+      var tabName = sh.getName();
+      // Product FY tabs look like TW_26-27 / GCV_2026-08
+      if (!/^(TW|PC|GCV|PCV|MiscD|Pvt Car)_/i.test(tabName)) return;
+      if (sh.getLastRow() < 2) {
+        missing++;
+        details.push({ sheet: file.getName(), tab: tabName, status: 'EMPTY' });
+        return;
+      }
+      tabCount++;
+      checked++;
+      var result = validateGrid(ss.getId(), tabName);
       if (result.valid) {
-        Logger.log('PASS  ' + id + ' > ' + tabName + ' (' + result.rowsChecked + ' rows)');
+        Logger.log('PASS  ' + file.getName() + ' > ' + tabName + ' (' + result.rowsChecked + ' rows)');
         passed++;
+        details.push({ sheet: file.getName(), tab: tabName, status: 'PASS', rows: result.rowsChecked });
       } else {
-        Logger.log('FAIL  ' + id + ' > ' + tabName + ': ' + result.errors.length + ' errors');
+        Logger.log('FAIL  ' + file.getName() + ' > ' + tabName + ': ' + result.errors.length + ' errors');
         failed++;
+        details.push({
+          sheet: file.getName(),
+          tab: tabName,
+          status: 'FAIL',
+          errors: result.errors.slice(0, 5)
+        });
       }
     });
-  });
+    if (tabCount === 0) {
+      missing++;
+      details.push({ sheet: file.getName(), tab: '(none)', status: 'NO_PRODUCT_TABS' });
+    }
+  }
 
   Logger.log('');
-  Logger.log('=== validateAllGrids: ' + passed + ' passed | ' + failed + ' failed | ' + missing + ' missing ===');
+  Logger.log('=== validateAllGrids: ' + passed + ' passed | ' + failed + ' failed | ' + missing + ' empty/missing | ' + checked + ' checked ===');
+  return { passed: passed, failed: failed, missing: missing, checked: checked, details: details };
 }
 
 // ── GRID ARCHIVE FOLDER MANAGEMENT ───────────────────────────────────────────

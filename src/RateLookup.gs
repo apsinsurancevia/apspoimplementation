@@ -42,6 +42,18 @@ function doGet(e) {
     if (action === 'ensureconfigtabs') {
       return handleEnsureConfigTabsRequest_(e);
     }
+    if (action === 'createoperationsguide') {
+      return handleCreateOperationsGuideRequest_(e);
+    }
+    if (action === 'completeopsguide') {
+      return handleCompleteOpsGuideRequest_(e);
+    }
+    if (action === 'opsstatementrecon') {
+      return handleOpsStatementReconRequest_(e);
+    }
+    if (action === 'validateallgrids') {
+      return handleValidateAllGridsRequest_(e);
+    }
     if (action === 'fillinsurers') {
       return handleFillInsurersRequest_(e);
     }
@@ -359,6 +371,82 @@ function handleEnsureConfigTabsRequest_(e) {
     var status = null;
     try { status = refreshInsurerStatus(); } catch (re) { status = { error: re.message }; }
     return jsonOut_({ success: true, ensured: ensured, status: status });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/** ?action=createOperationsGuide&key=... — build Ops Guide sheet in FOLDER_ROOT */
+function handleCreateOperationsGuideRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    var url = createOperationsGuide();
+    return jsonOut_({ success: true, url: url });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/** ?action=completeOpsGuide&key=... — audit + finish Ops Guide checklist */
+function handleCompleteOpsGuideRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    return jsonOut_({ success: true, report: completeOpsGuideProcess() });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message, stack: err.stack });
+  }
+}
+
+/** ?action=opsStatementRecon&key=... — retry Ops Guide steps 18–19 only */
+function handleOpsStatementReconRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    var s18 = _opsGuideRunStatementSample_();
+    var s19;
+    try {
+      var recon = runReconciliation('BAJAJ', CONFIG.CURRENT_PERIOD);
+      s19 = recon
+        ? _opsOk_('Recon rows=' + (recon.totalStatement || 0), (recon.totalStatement || 0) > 0, recon)
+        : _opsFail_('recon', 'null');
+    } catch (re) {
+      s19 = _opsFail_('recon', re.message);
+    }
+    // Tick guide boxes for 18/19 if ok
+    try {
+      var folder = DriveApp.getFolderById(CONFIG.FOLDER_ROOT);
+      var files = folder.getFilesByName('CaliberPO Operations Guide');
+      if (files.hasNext()) {
+        var gss = SpreadsheetApp.open(files.next());
+        var ot = gss.getSheetByName('One-Time Setup');
+        var mo = gss.getSheetByName('Monthly Cycle');
+        if (ot && s18.ok) ot.getRange(19, 1).setValue(true); // step 18 → row 19
+        if (ot && s19.ok) ot.getRange(20, 1).setValue(true);
+        if (mo && s18.ok) {
+          mo.getRange(5, 1).setValue(true);
+          mo.getRange(6, 1).setValue(true);
+        }
+        if (mo && s19.ok) mo.getRange(14, 1).setValue(true);
+      }
+    } catch (markErr) { /* non-fatal */ }
+    return jsonOut_({ success: true, step18: s18, step19: s19 });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
+
+/** ?action=validateAllGrids&key=... */
+function handleValidateAllGridsRequest_(e) {
+  var expected = 'caliberpo-aps-bootstrap-2026';
+  var key = (e && e.parameter && e.parameter.key) || '';
+  if (key !== expected) return jsonOut_({ success: false, error: 'invalid bootstrap key' });
+  try {
+    return jsonOut_({ success: true, result: validateAllGrids() });
   } catch (err) {
     return jsonOut_({ success: false, error: err.message });
   }

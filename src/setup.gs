@@ -204,12 +204,12 @@ var STATEMENT_HEADERS_DATA = [
   ],
   [
     'NIC', 'pdf', '', 1,
-    'Policy Number',
-    'Commission',
-    'Premium',
+    'Policy #-Endo#',
+    'Commission Amount',
+    'Premium Amount',
     'Insured Name',
-    'Issue Date',
-    'Skip rows where Commission is 0 or blank'
+    'Effective Date',
+    'PDF; header block (Sales Channel / Office / License) and Grand Total footer row are irrelevant — extract data table rows only; Commission Amount = OD/Other Commission + TP/Terr. Comm combined'
   ],
   [
     'UIIC', 'xlsx', 'Sheet1', 1,
@@ -890,8 +890,16 @@ function seedDefaultPrompts() {
 
       'NIC':
         'PDF statement. Tables span multiple pages. ' +
-        'policy_no = "Policy Number". brokerage_amount = "Commission" (skip rows where this is 0 or blank). ' +
-        'insured_name = "Insured Name". premium_amount = "Premium". policy_date = "Issue Date".',
+        'The PDF has a header block at the top (Sales Channel Code, Sales Channel Name, Office Code, ' +
+        'Office Name, Biz. Code, License #, License Exp Date) — ignore this entirely. ' +
+        'The data table has these exact column headers: Dept Name, Prdt Code, Bill Number, Policy #-Endo#, ' +
+        'Effective Date, Expiry Date, Insured Name, OD / Other Premium, Comm. %, OD / Other Commission, ' +
+        'TP / Terrorism Prm, Terr. %, TP / Terr. Comm, Premium Amount, Commission Amount. ' +
+        'There is a Grand Total footer row — skip it. ' +
+        'Mappings: policy_no = "Policy #-Endo#" (use the full value including endorsement suffix if present). ' +
+        'brokerage_amount = "Commission Amount" (this is the combined total of OD/Other Commission + TP/Terr. Comm). ' +
+        'insured_name = "Insured Name". premium_amount = "Premium Amount". policy_date = "Effective Date". ' +
+        'Skip rows where Commission Amount is 0 or blank.',
 
       'NIA':
         'PDF statement, two sections: "Policy Detail" and "Tax Summary". Extract from Policy Detail only. ' +

@@ -100,9 +100,14 @@ function doGet(e) {
     if (e && e.parameter && (e.parameter.api === 'true' || mode === 'api')) {
       return handleAPIRequest(e);
     }
-    return HtmlService
-      .createHtmlOutputFromFile('index')
-      .setTitle('CaliberPO — Rate Lookup')
+    var brokerName = (typeof CONFIG !== 'undefined' && CONFIG.BROKER_NAME)
+      ? String(CONFIG.BROKER_NAME).trim()
+      : '';
+    if (!brokerName) brokerName = 'CaliberPO';
+    var tmpl = HtmlService.createTemplateFromFile('index');
+    tmpl.brokerName = brokerName;
+    return tmpl.evaluate()
+      .setTitle(brokerName + ' — Rate Lookup')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   } catch (err) {
@@ -1270,7 +1275,12 @@ function getFormConfig() {
       'Construction Eqpt':{ cc: false, fuel: false,                                           gvw: false, seating: false, yom: false, nilDep: false, ncb: false }
     };
 
+    var brokerName = (CONFIG.BROKER_NAME && String(CONFIG.BROKER_NAME).trim())
+      ? String(CONFIG.BROKER_NAME).trim()
+      : 'CaliberPO';
+
     return {
+      brokerName:               brokerName,
       insurers:                 insurerList,
       productTypes:             productTypes,
       subTypesByProductType:    subTypesByProductType,

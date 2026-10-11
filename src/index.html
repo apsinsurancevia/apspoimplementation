@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CaliberPO — Rate Lookup</title>
+<title><?!= brokerName ?> — Rate Lookup</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -378,7 +378,7 @@
 <div class="container">
 
   <div class="header">
-    <div class="header-logo">CaliberPO</div>
+    <div class="header-logo" id="headerLogo"><?!= brokerName ?></div>
     <div class="header-sub">Commission Rate Lookup</div>
   </div>
 
@@ -538,6 +538,13 @@ document.addEventListener('DOMContentLoaded', function() {
   google.script.run
     .withSuccessHandler(function(config) {
       FORM_CONFIG = config;
+
+      // Brand header + tab title from CONFIG.BROKER_NAME (fallback CaliberPO)
+      var brand = (config && config.brokerName) ? String(config.brokerName).trim() : '';
+      if (!brand) brand = 'CaliberPO';
+      var logoEl = document.getElementById('headerLogo');
+      if (logoEl) logoEl.textContent = brand;
+      document.title = brand + ' — Rate Lookup';
 
       // Build insurer checkbox list
       var list = document.getElementById('insurerCheckboxList');

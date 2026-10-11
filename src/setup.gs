@@ -855,9 +855,92 @@ function refreshInsurerStatus() {
 
     SpreadsheetApp.flush();
     Logger.log('refreshInsurerStatus: updated ' + updated + ' rows');
-    return { updated: updated };
+
+    // ── Self-termination: stop daily trigger when all statuses are Y ──────────
+    var allGreen = true;
+    var refreshedData = statusSheet.getDataRange().getValues();
+    for (var j = 1; j < refreshedData.length; j++) {
+      var rowId = (refreshedData[j][0] || '').toString().trim();
+      if (!rowId) continue;
+      var dStat = (refreshedData[j][2] || '').toString().trim();
+      var gStat = (refreshedData[j][3] || '').toString().trim();
+      var sStat = (refreshedData[j][4] || '').toString().trim();
+      if (dStat !== 'Y' || gStat !== 'Y' || sStat !== 'Y') {
+        allGreen = false;
+        break;
+      }
+    }
+
+    if (allGreen) {
+      disableStatusRefreshTrigger();
+      Logger.log('refreshInsurerStatus: all insurers fully configured — daily trigger removed.');
+      try {
+        var coordinatorEmail = CONFIG.EMAIL_COORDINATOR;
+        if (coordinatorEmail) {
+          GmailApp.sendEmail(
+            coordinatorEmail,
+            '[CaliberPO] Setup Complete — All Insurers Configured',
+            'All 12 insurers now show Y for data_configured, grid_configured, and statement_configured.\n\n' +
+            'The daily Insurer_Status refresh trigger has been automatically removed.\n\n' +
+            'CaliberPO is ready for production recon runs.'
+          );
+        }
+      } catch (mailErr) {
+        Logger.log('refreshInsurerStatus: could not send completion email — ' + mailErr.message);
+      }
+    }
+
+    return { updated: updated, allGreen: allGreen };
 
   }, 'MANUAL');
+}
+
+/**
+ * Creates a daily trigger that runs refreshInsurerStatus() every morning.
+ * The trigger removes itself automatically once all insurers are fully
+ * configured (every status column = Y).
+ *
+ * Run once at the start of a new deployment:
+ *   enableStatusRefreshTrigger()
+ *
+ * Safe to call again — skips creation if the trigger already exists.
+ */
+function enableStatusRefreshTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'refreshInsurerStatus') {
+      Logger.log('Status refresh trigger already exists — skipping creation.');
+      return;
+    }
+  }
+
+  ScriptApp.newTrigger('refreshInsurerStatus')
+    .timeBased()
+    .everyDays(1)
+    .atHour(8)
+    .inTimezone('Asia/Kolkata')
+    .create();
+
+  Logger.log('Daily status refresh trigger created (08:00 IST). ' +
+    'Will self-terminate once all insurers are fully configured.');
+}
+
+/**
+ * Manually removes the daily status refresh trigger.
+ * Use if you want to stop the daily run before all boxes are green.
+ */
+function disableStatusRefreshTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var removed  = 0;
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'refreshInsurerStatus') {
+      ScriptApp.deleteTrigger(triggers[i]);
+      removed++;
+    }
+  }
+  Logger.log(removed > 0
+    ? 'Status refresh trigger removed.'
+    : 'No status refresh trigger found.');
 }
 
 /**

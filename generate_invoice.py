@@ -95,6 +95,27 @@ def set_currency(cell, value):
     cell.alignment    = Alignment(horizontal='right', vertical='center')
 
 
+def fmt_inr(amount: float) -> str:
+    """Return amount as an Indian-formatted string: e.g. 3,85,470.80"""
+    if amount is None:
+        return ''
+    neg = amount < 0
+    val = abs(round(float(amount), 2))
+    int_part = int(val)
+    dec_part = round((val - int_part) * 100)
+    s = str(int_part)
+    if len(s) <= 3:
+        grouped = s
+    else:
+        grouped = s[-3:]
+        s = s[:-3]
+        while s:
+            chunk = s[-2:] if len(s) >= 2 else s
+            grouped = chunk + ',' + grouped
+            s = s[:-len(chunk)]
+    return ('-' if neg else '') + grouped + '.' + f'{dec_part:02d}'
+
+
 # ---------------------------------------------------------------------------
 # Step 1 — Read Broker Setup
 # ---------------------------------------------------------------------------
@@ -557,339 +578,501 @@ def next_invoice_number(setup_path: str, insurer_id: str) -> str:
 
 # ---------------------------------------------------------------------------
 # Step 5 — Build invoice workbook
-# Layout: 10 columns (A-J), fits on one A4 page.
-#   Rows 1-15 : title / broker / invoice meta / buyer
-#   Row  17   : line-items table header (cols A-E)
-#   Rows 18+  : one row per product (cols A-E)
-#   After items: GST rows, totals, amount-in-words, tax summary, bank+signatory
+# Layout: 8 columns (A-H), A4 portrait.
+#
+# Column widths:  A=4  B=28  C=12  D=12  E=12  F=12  G=12  H=14
+# Left half  A:D — seller block / Sl+Particulars / left content
+# Right half E:H — invoice meta / HSN+Amount / right content
+#
+# Sections (top to bottom):
+#   Row 1          : Title "Tax Invoice" | "e-Invoice"
+#   Rows 2-4       : IRN block (A:D) + QR placeholder (E:H)
+#   Rows 5-11      : Seller block (A:D) | Invoice meta grid (E:H)
+#   Rows 12-18     : Buyer block (A:H)
+#   Row 19         : Line-items table header
+#   Rows 20-32     : Line-items content (data + GST sub-rows + filler)
+#   Row 33         : Total row
+#   Rows 34-35     : Amount in words
+#   Rows 36-38     : HSN/SAC tax summary (IGST or CGST+SGST variant)
+#   Rows 39-42     : Tax words + bank details
+#   Rows 43-47     : Remarks + signatory block
+#   Row 48         : Footer
 # ---------------------------------------------------------------------------
 
-def build_invoice(broker: dict, insurer: dict, line_items: list,
+# Column index constants
+_A, _B, _C, _D, _E, _F, _G, _H = 1, 2, 3, 4, 5, 6, 7, 8
+_LAST = _H
+
+_SELLER_L, _SELLER_R = _A, _D   # A:D = seller block / left half
+_META_L,   _META_R   = _E, _H   # E:H = meta / right half
+_SL_COL              = _A       # Sl No.
+_PART_L,   _PART_R   = _B, _D   # B:D = Particulars
+_HSN_L,    _HSN_R    = _E, _F   # E:F = HSN/SAC
+_AMT_L,    _AMT_R    = _G, _H   # G:H = Amount
+_M_LBL1,   _M_VAL1  = _E, _F   # meta label1 / value1
+_M_LBL2,   _M_VAL2  = _G, _H   # meta label2 / value2
+
+
+def build_invoice(broker: dict, insurer: dict,
                   invoice_no: str, invoice_date: str, period: str,
-                  gst_type: str) -> Workbook:
+                  taxable_amount: float, gst_type: str,
+                  particulars_note: str = '',
+                  round_off: float = 0.0,
+                  reference_no_and_date: str = '',
+                  signatory_name: str = 'SRIJAN KUMAR SINGH') -> Workbook:
 
     wb = Workbook()
     ws = wb.active
-    ws.title = "Tax Invoice"
+    ws.title = 'Tax Invoice'
 
-    # ── Page setup ────────────────────────────────────────────────────────────
-    ws.page_setup.paperSize        = ws.PAPERSIZE_A4
-    ws.page_setup.orientation      = ws.ORIENTATION_PORTRAIT
-    ws.page_setup.fitToPage        = True
-    ws.page_setup.fitToWidth       = 1
-    ws.page_setup.fitToHeight      = 1
+    # Page setup — A4 portrait
+    ws.page_setup.paperSize   = ws.PAPERSIZE_A4
+    ws.page_setup.orientation = ws.ORIENTATION_PORTRAIT
+    ws.page_setup.fitToPage   = True
+    ws.page_setup.fitToWidth  = 1
+    ws.page_setup.fitToHeight = 0
     ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_margins.left   = 0.5
+    ws.page_margins.right  = 0.5
+    ws.page_margins.top    = 0.5
+    ws.page_margins.bottom = 0.5
 
-    # ── Column widths ─────────────────────────────────────────────────────────
-    for col, w in zip('ABCDEFGHIJ', [6, 35, 14, 20, 22, 20, 26, 8, 8, 8]):
-        ws.column_dimensions[col].width = w
+    # Column widths: A=4 B=28 C=12 D=12 E=12 F=12 G=12 H=14
+    for col_letter, w in zip('ABCDEFGH', [4, 28, 12, 12, 12, 12, 12, 14]):
+        ws.column_dimensions[col_letter].width = w
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
-    def hfont(**kw):  return Font(name='Arial', **kw)
-    def hfill(hex_):  return PatternFill(fill_type='solid', fgColor=hex_)
-    def halign(h='left', v='center', wrap=False):
-        return Alignment(horizontal=h, vertical=v, wrap_text=wrap)
+    T = Side(border_style='thin')
+    N = Side(border_style=None)
 
-    def write(row, col, value, bold=False, size=10, color='000000',
-              italic=False, fill=None, align_h='left', align_v='center',
-              wrap=False, num_fmt=None, border=None):
-        c = ws.cell(row=row, column=col, value=value)
-        c.font      = hfont(bold=bold, size=size, color=color, italic=italic)
-        c.alignment = halign(align_h, align_v, wrap)
-        if fill:
-            c.fill = hfill(fill)
-        if num_fmt:
-            c.number_format = num_fmt
-        if border:
-            c.border = border
-        return c
+    # Column index aliases (1-based)
+    A, B, C, D, E, F, G, H = 1, 2, 3, 4, 5, 6, 7, 8
 
-    r = 1  # row pointer
+    def mc(r1, c1, r2, c2, v='', bold=False, italic=False, sz=9,
+           ha='left', va='center', wrap=True):
+        """Merge r1,c1:r2,c2 and write styled value to top-left cell."""
+        if r1 != r2 or c1 != c2:
+            ws.merge_cells(start_row=r1, start_column=c1,
+                           end_row=r2, end_column=c2)
+        cell = ws.cell(row=r1, column=c1)
+        if v is not None:
+            cell.value = v
+        cell.font = Font(name='Arial', size=sz, bold=bold, italic=italic)
+        cell.alignment = Alignment(horizontal=ha, vertical=va, wrap_text=wrap)
+        return cell
 
-    # ── ROW 1: Title ──────────────────────────────────────────────────────────
-    ws.merge_cells(f'A{r}:J{r}')
-    write(r, 1, 'Tax Invoice', bold=True, size=16, color='FFFFFF',
-          fill=DARK_BLUE, align_h='center')
-    ws.row_dimensions[r].height = 26
-    r += 1
+    def sc(r, c, v='', bold=False, italic=False, sz=9,
+           ha='left', va='center', wrap=True):
+        return mc(r, c, r, c, v, bold, italic, sz, ha, va, wrap)
 
-    # ── ROW 2: Blank ──────────────────────────────────────────────────────────
-    ws.row_dimensions[r].height = 5
-    r += 1
+    def rh(r, h):
+        ws.row_dimensions[r].height = h
 
-    # ── ROWS 3-10: Broker (left A-E) + Invoice meta (right F-J) ──────────────
-    block_start = r
+    def apply_box(r1, c1, r2, c2):
+        """Thin border on outer edges only; interior cells untouched."""
+        for r in range(r1, r2 + 1):
+            for c in range(c1, c2 + 1):
+                ws.cell(row=r, column=c).border = Border(
+                    top    = T if r == r1 else N,
+                    bottom = T if r == r2 else N,
+                    left   = T if c == c1 else N,
+                    right  = T if c == c2 else N,
+                )
 
-    broker_lines = [
-        (broker.get('Broker Name', '[NOT CONFIGURED]'),          True,  11),
-        (broker.get('Address Line 1', ''),                       False, 10),
-        ((broker.get('Address Line 2', '') + ', ' +
-          broker.get('City', '')).strip(', '),                   False, 10),
-        (broker.get('State', '') + ', Code: ' +
-         broker.get('State Code (2-digit GST)', '') +
-         '   PIN: ' + broker.get('PIN Code', ''),                False, 10),
-        ('GSTIN/UIN: ' + broker.get('GSTIN/UIN', '[NOT CONFIGURED]'), False, 10),
-        ('E-Mail: '   + broker.get('Contact Email', '[NOT CONFIGURED]'), False, 10),
-        ('Mob No.: '  + broker.get('Mobile No.', '[NOT CONFIGURED]'), False, 10),
-        ('IRDAI Lic: '+ broker.get('IRDAI Licence Number', '[NOT CONFIGURED]'), False, 9),
-    ]
+    def apply_grid(r1, c1, r2, c2):
+        """Thin border on every cell in rectangle."""
+        for r in range(r1, r2 + 1):
+            for c in range(c1, c2 + 1):
+                ws.cell(row=r, column=c).border = Border(
+                    top=T, bottom=T, left=T, right=T)
 
-    meta_lines = [
-        ('Invoice No.',              invoice_no),
-        ('Dated',                    invoice_date),
-        ('Delivery Note',            ''),
-        ('Mode/Terms of Payment',    ''),
-        ("Supplier's Ref.",          ''),
-        ('Other Reference(s)',       ''),
-        ('Period',                   period),
-        ('SAC Code',                 str(insurer.get('sac_code') or SAC_DEFAULT)),
-    ]
+    def add_outer_border(r1, c1, r2, c2):
+        """Merge outer border onto existing borders (non-destructive)."""
+        for r in range(r1, r2 + 1):
+            for c in range(c1, c2 + 1):
+                if c not in (c1, c2) and r not in (r1, r2):
+                    continue
+                cell = ws.cell(row=r, column=c)
+                ex = cell.border
+                cell.border = Border(
+                    left   = T if c == c1 else ex.left,
+                    right  = T if c == c2 else ex.right,
+                    top    = T if r == r1 else ex.top,
+                    bottom = T if r == r2 else ex.bottom,
+                )
 
-    for (btxt, bbold, bsz), (lbl, val) in zip(broker_lines, meta_lines):
-        ws.merge_cells(f'A{r}:E{r}')
-        write(r, 1, btxt, bold=bbold, size=bsz)
-        ws.row_dimensions[r].height = 16
-
-        write(r, 6, lbl, bold=True, size=9, fill=LIGHT_GREY, align_h='right')
-        ws.merge_cells(f'G{r}:J{r}')
-        write(r, 7, val, size=9, align_h='left')
-        r += 1
-
-    outer_border(ws, block_start, 1, r - 1, 5)   # broker block
-    outer_border(ws, block_start, 6, r - 1, 10)  # meta block
-
-    # ── ROWS 11-15: Buyer (Insurer) ───────────────────────────────────────────
-    buyer_start = r
-    ws.merge_cells(f'A{r}:J{r}')
-    write(r, 1, 'Buyer', bold=True, size=10, fill=LIGHT_GREY)
-    ws.row_dimensions[r].height = 16
-    r += 1
-
-    ws.merge_cells(f'A{r}:J{r}')
-    write(r, 1, str(insurer.get('insurer_name', '')).upper(), bold=True, size=11)
-    ws.row_dimensions[r].height = 16
-    r += 1
-
-    ws.merge_cells(f'A{r}:J{r}')
-    write(r, 1, str(insurer.get('insurer_address', '')), size=10, wrap=True)
-    ws.row_dimensions[r].height = 20
-    r += 1
-
-    ws.merge_cells(f'A{r}:J{r}')
-    write(r, 1, 'GSTIN/UIN: ' + str(insurer.get('insurer_gstin', '')), size=10)
-    ws.row_dimensions[r].height = 16
-    r += 1
-
-    ws.merge_cells(f'A{r}:J{r}')
-    write(r, 1, 'State Name: ' + str(insurer.get('insurer_state', '')) +
-          ',  Code: ' + str(insurer.get('insurer_state_code', '')), size=10)
-    ws.row_dimensions[r].height = 16
-    r += 1
-
-    outer_border(ws, buyer_start, 1, r - 1, 10)
-
-    # ── ROW 16: Blank ─────────────────────────────────────────────────────────
-    ws.row_dimensions[r].height = 5
-    r += 1
-
-    # ── ROW 17: Line items header ─────────────────────────────────────────────
-    tbl_headers = ['SI No.', 'Description of Goods', 'HSN/SAC',
-                   'Premium (Rs.)', 'Commission Amount (Rs.)']
-    for ci, hdr in enumerate(tbl_headers, start=1):
-        write(r, ci, hdr, bold=True, size=10, color='FFFFFF',
-              fill=DARK_BLUE, align_h='center', border=thin_border())
-    ws.row_dimensions[r].height = 18
-    r += 1
-
-    # ── ROWS 18+: Line items ──────────────────────────────────────────────────
-    sac       = str(insurer.get('sac_code') or SAC_DEFAULT)
-    tot_prem  = 0.0
-    tot_comm  = 0.0
-    item_start = r
-
-    for idx, item in enumerate(line_items, start=1):
-        row_fill = 'FFFFFF' if idx % 2 == 1 else LIGHT_BLUE
-        write(r, 1, idx,             size=10, fill=row_fill, align_h='center', border=thin_border())
-        write(r, 2, item['product'], size=10, fill=row_fill, align_h='left',   border=thin_border())
-        write(r, 3, sac,             size=10, fill=row_fill, align_h='center', border=thin_border())
-
-        c4 = ws.cell(row=r, column=4)
-        set_currency(c4, item['premium'])
-        c4.font   = hfont(size=10)
-        c4.fill   = hfill(row_fill)
-        c4.border = thin_border()
-
-        c5 = ws.cell(row=r, column=5)
-        set_currency(c5, item['commission'])
-        c5.font   = hfont(size=10)
-        c5.fill   = hfill(row_fill)
-        c5.border = thin_border()
-
-        tot_prem += item['premium']
-        tot_comm += item['commission']
-        ws.row_dimensions[r].height = 16
-        r += 1
-
-    item_end = r - 1
-
-    # ── Blank row ─────────────────────────────────────────────────────────────
-    ws.row_dimensions[r].height = 6
-    r += 1
-
-    # ── GST rows ──────────────────────────────────────────────────────────────
-    gst_amount = round(tot_comm * GST_RATE, 2)
-    half_gst   = round(tot_comm * 0.09, 2)
-
-    if gst_type == 'CGST_SGST':
-        for lbl, amt in [('CGST 9%', half_gst), ('SGST 9%', half_gst)]:
-            write(r, 4, lbl, size=10, align_h='right')
-            c = ws.cell(row=r, column=5)
-            set_currency(c, amt)
-            c.font = hfont(size=10)
-            ws.row_dimensions[r].height = 15
-            r += 1
+    # ── Compute GST ───────────────────────────────────────────────────────────
+    gst_lc = (gst_type or 'igst').strip().lower()
+    if gst_lc == 'igst':
+        igst_rate   = 18.0
+        igst_amount = round(taxable_amount * igst_rate / 100, 2)
+        cgst_rate   = sgst_rate = 0.0
+        cgst_amount = sgst_amount = 0.0
+        total_tax   = igst_amount
     else:
-        write(r, 4, 'IGST 18%', size=10, align_h='right')
-        c = ws.cell(row=r, column=5)
-        set_currency(c, gst_amount)
-        c.font = hfont(size=10)
-        ws.row_dimensions[r].height = 15
-        r += 1
+        cgst_rate   = sgst_rate = 9.0
+        cgst_amount = round(taxable_amount * cgst_rate / 100, 2)
+        sgst_amount = round(taxable_amount * sgst_rate / 100, 2)
+        igst_rate   = 0.0
+        igst_amount = 0.0
+        total_tax   = cgst_amount + sgst_amount
 
-    # ── Totals row ────────────────────────────────────────────────────────────
-    grand_total = round(tot_comm + gst_amount, 2)
+    total_invoice_amount = round(taxable_amount + total_tax + round_off, 2)
 
-    write(r, 2, 'Total', bold=True, size=10, fill=TOTALS_BLU,
-          align_h='right', border=thin_border())
+    row = 1  # running row pointer
 
-    c4 = ws.cell(row=r, column=4)
-    set_currency(c4, tot_prem)
-    c4.font   = hfont(bold=True, size=10)
-    c4.fill   = hfill(TOTALS_BLU)
-    c4.border = thin_border()
+    # =========================================================================
+    # Row 1 — Title
+    # =========================================================================
+    rh(row, 22)
+    mc(row, A, row, G, 'Tax Invoice', bold=True, sz=12, ha='center')
+    sc(row, H, 'e-Invoice', bold=True, sz=9, ha='right')
+    apply_grid(row, A, row, H)
+    row += 1
 
-    c5 = ws.cell(row=r, column=5)
-    set_currency(c5, grand_total)
-    c5.font   = hfont(bold=True, size=10)
-    c5.fill   = hfill(TOTALS_BLU)
-    c5.border = thin_border()
+    # =========================================================================
+    # Rows 2-4 — IRN block (A:D) + QR placeholder (E:H spans 3 rows)
+    # =========================================================================
+    irn_start = row
+    rh(row, 28)
+    mc(row, A, row, D, 'IRN       : ', sz=9, ha='left', va='top')
+    mc(row, E, row + 2, H, '', sz=8, ha='center', va='center')
+    row += 1
+    rh(row, 14)
+    mc(row, A, row, D, 'Ack No.   : ', sz=9)
+    row += 1
+    rh(row, 14)
+    mc(row, A, row, D, 'Ack Date  : ', sz=9)
+    row += 1
+    apply_box(irn_start,     A, irn_start + 2, D)
+    apply_box(irn_start,     E, irn_start + 2, H)
 
-    ws.row_dimensions[r].height = 18
-    r += 2  # totals row + blank
+    # =========================================================================
+    # Rows 5-11 — Seller block (A:D) | Invoice meta 2×2 grid (E:H)
+    # =========================================================================
+    hdr_start = row
 
-    # ── Amount in words ───────────────────────────────────────────────────────
-    ws.merge_cells(f'A{r}:E{r}')
-    write(r, 1, 'Amount Chargeable (in words):', bold=True, size=10)
-    ws.row_dimensions[r].height = 15
-    r += 1
+    seller_rows = [
+        ('APS INSURANCE BROKING SERVICES PRIVATE LIMITED', True,  9),
+        ('68,SUNDAR NAGAR EXT,INDORE,DDU AGAR,INDORE,INDORE',    False, 9),
+        ('MADHYA PRADESH, INDIA',                                  False, 9),
+        ('Pin Code : 452010',                                      False, 9),
+        ('GSTIN/UIN: 23AAZCA5637P1ZT',                           False, 9),
+        ('State Name : Madhya Pradesh, Code : 23',                False, 9),
+        ('CIN: U66220MP2023PTC068251',                            False, 9),
+    ]
 
-    ws.merge_cells(f'A{r}:E{r}')
-    write(r, 1, number_to_words(grand_total), bold=True, italic=True, size=10)
-    ws.row_dimensions[r].height = 15
-    r += 2  # words row + blank
+    meta_rows_data = [
+        ('Invoice No.',           invoice_no,             'Dated',                 invoice_date),
+        ('Delivery Note',         '',                      'Mode/Terms of Payment', ''),
+        ('Reference No. & Date.', reference_no_and_date,  'Other References',      ''),
+        ("Buyer's Order No.",     '',                      'Dated',                 ''),
+        ('Dispatch Doc No.',      '',                      'Delivery Note Date',    ''),
+        ('Dispatched through',    '',                      'Destination',           ''),
+        None,  # Terms of Delivery — spans full right side
+    ]
 
-    # ── Tax summary table ─────────────────────────────────────────────────────
-    tax_hdrs = ['HSN/SAC', 'Taxable Value', 'Central Tax\nRate', 'Central Tax\nAmt',
-                'State Tax\nRate', 'State Tax\nAmt', 'Total Tax\nAmt']
-    for ci, h in enumerate(tax_hdrs, start=1):
-        write(r, ci, h, bold=True, size=9, fill=GREEN_GREY,
-              align_h='center', wrap=True, border=thin_border())
-    ws.row_dimensions[r].height = 28
-    r += 1
+    for i, (seller_text, bold, sz) in enumerate(seller_rows):
+        r = hdr_start + i
+        rh(r, 16 if i == 0 else 14)
+        mc(r, A, r, D, seller_text, bold=bold, sz=sz)
 
-    if gst_type == 'CGST_SGST':
-        tax_data = [sac, tot_comm, '9%', half_gst, '9%', half_gst, gst_amount]
+        meta = meta_rows_data[i]
+        if meta is None:
+            mc(r, E, r, H, 'Terms of Delivery', bold=True, sz=9)
+            apply_grid(r, E, r, H)
+        else:
+            lbl1, val1, lbl2, val2 = meta
+            sc(r, E, lbl1, bold=True, sz=8)
+            sc(r, F, val1, sz=9)
+            sc(r, G, lbl2, bold=True, sz=8)
+            sc(r, H, val2, sz=9)
+            apply_grid(r, E, r, H)
+
+    hdr_end = hdr_start + len(seller_rows) - 1
+    apply_box(hdr_start, A, hdr_end, D)
+    row = hdr_end + 1
+
+    # =========================================================================
+    # Buyer block (full width A:H)
+    # =========================================================================
+    buyer_start = row
+    ins_name    = str(insurer.get('insurer_name',     '') or '').upper()
+    ins_addr    = str(insurer.get('insurer_address',  '') or '')
+    ins_gstin   = str(insurer.get('insurer_gstin',    '') or '')
+    ins_state   = str(insurer.get('insurer_state',    '') or '')
+    ins_sc      = str(insurer.get('insurer_state_code', '') or '')
+
+    buyer_lines = [
+        ('Buyer (Bill to)', False, 9),
+        (ins_name,          True,  10),
+        (ins_addr,          False, 9),
+        (f'GSTIN/UIN : {ins_gstin}',                         False, 9),
+        (f'State Name : {ins_state}, Code : {ins_sc}',       False, 9),
+    ]
+    for txt, bold, sz in buyer_lines:
+        rh(row, 18 if bold else 14)
+        mc(row, A, row, H, txt, bold=bold, sz=sz)
+        row += 1
+    apply_box(buyer_start, A, row - 1, H)
+
+    # =========================================================================
+    # Line items table header
+    # =========================================================================
+    rh(row, 18)
+    sc(row, A,        'Sl No.',     bold=True, sz=9, ha='center')
+    mc(row, B, row, D, 'Particulars', bold=True, sz=9, ha='center')
+    mc(row, E, row, F, 'HSN/SAC',    bold=True, sz=9, ha='center')
+    mc(row, G, row, H, 'Amount',     bold=True, sz=9, ha='right')
+    apply_grid(row, A, row, H)
+    row += 1
+
+    # =========================================================================
+    # Line items content — data row, GST sub-rows, filler
+    # =========================================================================
+    li_start = row
+
+    # Data row 1: sl=1, "Insurance Commision" (bold), 997161, taxable_amount
+    rh(row, 16)
+    sc(row, A,        '1',                   sz=9, ha='center')
+    mc(row, B, row, D, 'Insurance Commision', bold=True, sz=9)
+    mc(row, E, row, F, '997161',              sz=9, ha='center')
+    mc(row, G, row, H, fmt_inr(taxable_amount), sz=9, ha='right')
+    apply_grid(row, A, row, H)
+    row += 1
+
+    # Data row 2: particulars note (italic, smaller)
+    if particulars_note:
+        rh(row, 13)
+        sc(row, A, '', sz=9)
+        mc(row, B, row, D, particulars_note, italic=True, sz=8)
+        mc(row, E, row, F, '', sz=9)
+        mc(row, G, row, H, '', sz=9)
+        apply_grid(row, A, row, H)
+        row += 1
+
+    # GST sub-rows (label in Particulars col, amount in Amount col)
+    if gst_lc == 'igst':
+        gst_sub = [(f'Output Igst @{igst_rate:.0f}%', igst_amount)]
     else:
-        tax_data = [sac, tot_comm, '18%', gst_amount, '-', 0, gst_amount]
+        gst_sub = [
+            (f'Output Cgst@ {cgst_rate:.0f}%', cgst_amount),
+            (f'Output Sgst @ {sgst_rate:.0f}%', sgst_amount),
+        ]
 
-    for ci, val in enumerate(tax_data, start=1):
-        c = ws.cell(row=r, column=ci, value=val)
-        c.font   = hfont(size=9)
-        c.border = thin_border()
-        if isinstance(val, float) and ci > 1:
-            c.number_format = INDIAN_FMT
-            c.alignment = halign('right')
-        else:
-            c.alignment = halign('center')
-    ws.row_dimensions[r].height = 16
-    r += 1
+    for lbl, amt in gst_sub:
+        rh(row, 13)
+        sc(row, A, '', sz=9)
+        mc(row, B, row, D, lbl, sz=9)
+        mc(row, E, row, F, '', sz=9)
+        mc(row, G, row, H, fmt_inr(amt), sz=9, ha='right')
+        apply_grid(row, A, row, H)
+        row += 1
 
-    # Tax table totals row
-    tax_totals = ['Total', tot_comm, '', gst_amount, '', gst_amount, gst_amount]
-    for ci, val in enumerate(tax_totals, start=1):
-        c = ws.cell(row=r, column=ci, value=val if val != '' else None)
-        c.font   = hfont(bold=True, size=9)
-        c.fill   = hfill(GREEN_GREY)
-        c.border = thin_border()
-        if isinstance(val, float) and ci > 1:
-            c.number_format = INDIAN_FMT
-            c.alignment = halign('right')
-        else:
-            c.alignment = halign('right' if ci == 1 else 'center')
-    ws.row_dimensions[r].height = 16
-    r += 1
+    # Round-off row (optional)
+    if round_off != 0.0:
+        rh(row, 13)
+        sc(row, A, '', sz=9)
+        ro_lbl = 'Less: Round Off' if round_off < 0 else 'Round Off'
+        ro_val = (f'(-){fmt_inr(abs(round_off))}' if round_off < 0
+                  else fmt_inr(round_off))
+        mc(row, B, row, D, ro_lbl, sz=9)
+        mc(row, E, row, F, '', sz=9)
+        mc(row, G, row, H, ro_val, sz=9, ha='right')
+        apply_grid(row, A, row, H)
+        row += 1
 
-    # ── Tax amount in words ───────────────────────────────────────────────────
-    ws.merge_cells(f'A{r}:E{r}')
-    write(r, 1, 'Tax Amount (in words): ' + number_to_words(gst_amount),
-          bold=True, size=9)
-    ws.row_dimensions[r].height = 15
-    r += 2  # + blank
+    # Blank filler rows
+    filler = max(4, 11 - (row - li_start))
+    for _ in range(filler):
+        rh(row, 13)
+        sc(row, A, '', sz=9)
+        mc(row, B, row, D, '', sz=9)
+        mc(row, E, row, F, '', sz=9)
+        mc(row, G, row, H, '', sz=9)
+        apply_grid(row, A, row, H)
+        row += 1
 
-    # ── Bank details (left A-E) + Signatory (right F-J) ──────────────────────
-    bank_start = r
-    bank_lines = [
-        ("Company's PAN: " + broker.get('PAN', '[NOT CONFIGURED]'),     True),
-        ("Company's Bank Details",                                        True),
-        ('Bank:   ' + broker.get('Bank Name', '[NOT CONFIGURED]'),       False),
-        ('A/c No: ' + broker.get('Account Number', '[NOT CONFIGURED]'),  False),
-        ('Branch & IFS Code: ' + broker.get('City', '') +
-         ' & ' + broker.get('IFSC Code', '[NOT CONFIGURED]'),            False),
-    ]
-    for txt, bold in bank_lines:
-        ws.merge_cells(f'A{r}:E{r}')
-        write(r, 1, txt, bold=bold, size=10)
-        ws.row_dimensions[r].height = 15
-        r += 1
+    # =========================================================================
+    # Total row
+    # =========================================================================
+    rh(row, 18)
+    sc(row, A, '', sz=9)
+    mc(row, B, row, F, 'Total', bold=True, sz=9, ha='right')
+    mc(row, G, row, H, fmt_inr(total_invoice_amount), bold=True, sz=9, ha='right')
+    apply_grid(row, A, row, H)
+    row += 1
 
-    # Signatory — anchored at bank_start on the right
-    ws.merge_cells(f'F{bank_start}:J{bank_start}')
-    write(bank_start, 6, 'For ' + broker.get('Broker Name', '[NOT CONFIGURED]'),
-          bold=True, size=10, align_h='center')
-    for sr in range(bank_start + 1, bank_start + 4):
-        ws.merge_cells(f'F{sr}:J{sr}')
-        ws.row_dimensions[sr].height = 15
-    ws.merge_cells(f'F{bank_start + 4}:J{bank_start + 4}')
-    write(bank_start + 4, 6, 'Authorised Signatory', bold=True, size=10, align_h='center')
+    # =========================================================================
+    # Amount in words
+    # =========================================================================
+    rh(row, 14)
+    mc(row, A, row, F, 'Amount Chargeable (in words)', sz=9)
+    mc(row, G, row, H, 'E. & O.E', sz=9, ha='right')
+    apply_box(row, A, row, H)
+    row += 1
 
-    r += 1  # blank after bank block
+    rh(row, 16)
+    mc(row, A, row, H, number_to_words(total_invoice_amount), bold=True, sz=9)
+    apply_box(row, A, row, H)
+    row += 1
 
-    # ── Declaration ───────────────────────────────────────────────────────────
-    decl = [
-        ('Declaration', True, False),
-        ('We declare that this invoice shows the actual brokerage payable for the', False, True),
-        ('services rendered and that all particulars are true and correct.', False, True),
-    ]
-    for txt, bold, italic in decl:
-        ws.merge_cells(f'A{r}:E{r}')
-        write(r, 1, txt, bold=bold, italic=italic, size=9)
-        ws.row_dimensions[r].height = 13
-        r += 1
+    # =========================================================================
+    # HSN/SAC tax summary (layout depends on GST type)
+    # =========================================================================
+    if gst_lc == 'igst':
+        # 5-column: HSN/SAC | Taxable Value | IGST Rate | IGST Amount | Total Tax Amount
+        # Mapped onto 8 cells: A | B:C | D:E | F:G | H
+        rh(row, 16)
+        sc(row, A,        'HSN/SAC',          bold=True, sz=9, ha='center')
+        mc(row, B, row, C, 'Taxable Value',   bold=True, sz=9, ha='center')
+        mc(row, D, row, E, 'IGST Rate',       bold=True, sz=9, ha='center')
+        mc(row, F, row, G, 'IGST Amount',     bold=True, sz=9, ha='center')
+        sc(row, H,        'Total Tax Amount', bold=True, sz=8, ha='center', wrap=True)
+        apply_grid(row, A, row, H)
+        row += 1
 
-    # ── Outer border around full invoice ──────────────────────────────────────
-    last_row = r - 1
-    for row_obj in ws.iter_rows(min_row=1, max_row=last_row, min_col=1, max_col=10):
-        for cell in row_obj:
-            existing = cell.border
-            cell.border = Border(
-                left   = THIN if cell.column == 1        else existing.left,
-                right  = THIN if cell.column == 10       else existing.right,
-                top    = THIN if cell.row    == 1        else existing.top,
-                bottom = THIN if cell.row    == last_row else existing.bottom,
-            )
+        rh(row, 14)
+        sc(row, A, '997161',                  sz=9, ha='center')
+        mc(row, B, row, C, fmt_inr(taxable_amount), sz=9, ha='right')
+        mc(row, D, row, E, f'{igst_rate:.0f}%',     sz=9, ha='center')
+        mc(row, F, row, G, fmt_inr(igst_amount),    sz=9, ha='right')
+        sc(row, H, fmt_inr(igst_amount),            sz=9, ha='right')
+        apply_grid(row, A, row, H)
+        row += 1
 
-    ws.print_area = f'A1:J{last_row}'
+        rh(row, 14)
+        sc(row, A, 'Total',                         bold=True, sz=9, ha='right')
+        mc(row, B, row, C, fmt_inr(taxable_amount), bold=True, sz=9, ha='right')
+        mc(row, D, row, E, '',                      sz=9)
+        mc(row, F, row, G, fmt_inr(igst_amount),    bold=True, sz=9, ha='right')
+        sc(row, H, fmt_inr(igst_amount),            bold=True, sz=9, ha='right')
+        apply_grid(row, A, row, H)
+        row += 1
 
+    else:
+        # 7-column: HSN/SAC | Taxable | CGST Rate | CGST Amt | SGST Rate | SGST Amt | Total Tax
+        # Mapped: A | B:C | D | E | F | G | H
+        rh(row, 20)
+        sc(row, A,        'HSN/SAC',              bold=True, sz=9, ha='center')
+        mc(row, B, row, C, 'Taxable Value',       bold=True, sz=9, ha='center')
+        sc(row, D,        'CGST Rate',            bold=True, sz=8, ha='center', wrap=True)
+        sc(row, E,        'CGST Amount',          bold=True, sz=8, ha='center', wrap=True)
+        sc(row, F,        'SGST/UTGST Rate',      bold=True, sz=8, ha='center', wrap=True)
+        sc(row, G,        'SGST/UTGST Amount',    bold=True, sz=8, ha='center', wrap=True)
+        sc(row, H,        'Total Tax Amount',     bold=True, sz=8, ha='center', wrap=True)
+        apply_grid(row, A, row, H)
+        row += 1
+
+        rh(row, 14)
+        sc(row, A, '997161',                       sz=9, ha='center')
+        mc(row, B, row, C, fmt_inr(taxable_amount), sz=9, ha='right')
+        sc(row, D, f'{cgst_rate:.0f}%',            sz=9, ha='center')
+        sc(row, E, fmt_inr(cgst_amount),           sz=9, ha='right')
+        sc(row, F, f'{sgst_rate:.0f}%',            sz=9, ha='center')
+        sc(row, G, fmt_inr(sgst_amount),           sz=9, ha='right')
+        sc(row, H, fmt_inr(total_tax),             sz=9, ha='right')
+        apply_grid(row, A, row, H)
+        row += 1
+
+        rh(row, 14)
+        sc(row, A, 'Total',                        bold=True, sz=9, ha='right')
+        mc(row, B, row, C, fmt_inr(taxable_amount), bold=True, sz=9, ha='right')
+        sc(row, D, '',                             sz=9)
+        sc(row, E, fmt_inr(cgst_amount),           bold=True, sz=9, ha='right')
+        sc(row, F, '',                             sz=9)
+        sc(row, G, fmt_inr(sgst_amount),           bold=True, sz=9, ha='right')
+        sc(row, H, fmt_inr(total_tax),             bold=True, sz=9, ha='right')
+        apply_grid(row, A, row, H)
+        row += 1
+
+    # =========================================================================
+    # Tax amount in words + Bank details (two-column)
+    # =========================================================================
+    rh(row, 14)
+    mc(row, A, row, D,
+       f'Tax Amount (in words) :   {number_to_words(total_tax)}',
+       sz=9, wrap=True)
+    mc(row, E, row, H, "Company's Bank Details", bold=True, sz=9)
+    apply_box(row, A, row, D)
+    apply_box(row, E, row, H)
+    row += 1
+
+    for bank_lbl, bank_val in [
+        ('Bank Name',         ': ICICI Bank'),
+        ('A/c No.',           ': 656905601822'),
+        ('Branch & IFS Code', ': INDORE M G ROAD & ICIC0006569'),
+    ]:
+        rh(row, 14)
+        mc(row, A, row, D, '', sz=9)
+        sc(row, E, bank_lbl, bold=True, sz=9)
+        mc(row, F, row, H, bank_val, sz=9)
+        apply_box(row, A, row, D)
+        apply_grid(row, E, row, H)
+        row += 1
+
+    # =========================================================================
+    # Remarks + signatory block (two-column)
+    # =========================================================================
+    remarks_month = ''
+    if period:
+        p = period.strip().split()
+        if len(p) >= 2:
+            remarks_month = f"{p[0][:3].upper()},{str(p[1])[2:]}"
+
+    rh(row, 14)
+    mc(row, A, row, D, 'Remarks:', bold=True, sz=9)
+    mc(row, E, row, H,
+       'for APS INSURANCE BROKING SERVICES PRIVATE LIMITED',
+       bold=True, sz=9, ha='center')
+    apply_box(row, A, row, D)
+    apply_box(row, E, row, H)
+    row += 1
+
+    rh(row, 14)
+    mc(row, A, row, D,
+       f'BEING INVOICE RAISED MONTH OF {remarks_month}', sz=9)
+    mc(row, E, row, H, '', sz=9)
+    apply_box(row, A, row, D)
+    apply_box(row, E, row, H)
+    row += 1
+
+    rh(row, 14)
+    mc(row, A, row, D, "Company's PAN : AAZCA5637P", sz=9)
+    mc(row, E, row, H, '', sz=9)
+    apply_box(row, A, row, D)
+    apply_box(row, E, row, H)
+    row += 1
+
+    rh(row, 28)
+    mc(row, A, row, D, '', sz=9)
+    mc(row, E, row, H,
+       f'Digitally signed by {signatory_name}',
+       italic=True, sz=8, ha='center', va='center')
+    apply_box(row, A, row, D)
+    apply_box(row, E, row, H)
+    row += 1
+
+    rh(row, 16)
+    mc(row, A, row, D, '', sz=9)
+    mc(row, E, row, H, 'Authorised Signatory', bold=True, sz=9, ha='center')
+    apply_box(row, A, row, D)
+    apply_box(row, E, row, H)
+    row += 1
+
+    # =========================================================================
+    # Footer
+    # =========================================================================
+    rh(row, 14)
+    mc(row, A, row, H,
+       'This is a Computer Generated Invoice',
+       italic=True, sz=8, ha='center')
+    apply_box(row, A, row, H)
+    last_row = row
+
+    # Reinforce the overall outer border (non-destructive)
+    add_outer_border(1, A, last_row, H)
+
+    ws.print_area = f'A1:H{last_row}'
     return wb
 
 
@@ -898,13 +1081,25 @@ def build_invoice(broker: dict, insurer: dict, line_items: list,
 # ---------------------------------------------------------------------------
 
 def main():
-    ap = argparse.ArgumentParser(description='CaliberPO — Tax Invoice Generator')
-    ap.add_argument('--statement',   required=True,  help='Path to insurer statement file')
-    ap.add_argument('--insurer_id',  required=True,  help='Insurer ID e.g. BAJAJ, OR, NIC')
-    ap.add_argument('--period',      required=True,  help='Statement period e.g. "July 2026"')
-    ap.add_argument('--invoice_no',  default=None,   help='Invoice number (auto-generated if omitted)')
-    ap.add_argument('--invoice_date',default=None,   help='Invoice date DD-MM-YYYY (default: today)')
-    ap.add_argument('--setup',       required=True,  help='Path to CaliberPO_Setup.xlsx')
+    ap = argparse.ArgumentParser(description='CaliberPO — APS Tax Invoice Generator')
+    ap.add_argument('--statement',    required=True,
+                    help='Path to insurer statement file')
+    ap.add_argument('--insurer_id',   required=True,
+                    help='Insurer ID e.g. BAJAJ, OR, NIC')
+    ap.add_argument('--period',       required=True,
+                    help='Statement period e.g. "August 2026"')
+    ap.add_argument('--invoice_no',   default=None,
+                    help='Invoice number (auto-generated if omitted)')
+    ap.add_argument('--invoice_date', default=None,
+                    help='Invoice date DD-MM-YYYY (default: today)')
+    ap.add_argument('--reference',    default='',
+                    help='Reference No. & Date for invoice meta')
+    ap.add_argument('--round_off',    default='0',
+                    help='Round-off adjustment amount (e.g. -0.80)')
+    ap.add_argument('--setup',        required=True,
+                    help='Path to CaliberPO_Setup.xlsx')
+    ap.add_argument('--out_dir',      default=None,
+                    help='Output directory (default: OUT_DIR constant)')
     args = ap.parse_args()
 
     for p, label in [(args.statement, 'statement'), (args.setup, 'setup')]:
@@ -919,60 +1114,70 @@ def main():
     print(f"  Insurer ID : {args.insurer_id}")
     print(f"  Period     : {args.period}")
 
-    # Steps 1-2
     broker  = read_broker_setup(args.setup)
     insurer = read_insurer_master(args.setup, args.insurer_id)
 
-    invoice_no   = args.invoice_no   or next_invoice_number(args.setup, args.insurer_id)
+    invoice_no   = args.invoice_no or next_invoice_number(args.setup, args.insurer_id)
     invoice_date = args.invoice_date or datetime.now().strftime('%d-%m-%Y')
+    round_off    = float(args.round_off or 0)
 
     print(f"  Invoice No : {invoice_no}")
     print(f"  Date       : {invoice_date}")
 
-    # Step 3
     print(f"\nParsing statement ...")
     line_items = detect_and_parse(args.statement, args.insurer_id)
-    print(f"  {len(line_items)} product line(s) extracted")
+    print(f"  {len(line_items)} product line(s):")
     for item in line_items:
-        print(f"    {item['product']:<25} Premium: {item['premium']:>14,.2f}   "
-              f"Commission: {item['commission']:>14,.2f}")
+        print(f"    {item['product']:<25}  premium: {item['premium']:>14,.2f}  "
+              f"commission: {item['commission']:>14,.2f}")
 
-    # Step 4
+    taxable_amount = sum(i['commission'] for i in line_items)
+
     gst_type = determine_gst(
         broker.get('State Code (2-digit GST)', ''),
         insurer.get('insurer_state_code', '')
     )
     print(f"  GST type   : {gst_type}")
+    print(f"  Taxable    : {taxable_amount:,.2f}")
 
-    # Step 5
-    wb = build_invoice(broker, insurer, line_items, invoice_no, invoice_date,
-                       args.period, gst_type)
+    # Derive particulars note from period ("August 2026" → "Brokerage for the month of Aug,26")
+    p = args.period.strip().split()
+    if len(p) >= 2:
+        particulars_note = f"Brokerage for the month of {p[0][:3]},{str(p[1])[2:]}"
+    else:
+        particulars_note = args.period
 
-    # Step 6
-    os.makedirs(OUT_DIR, exist_ok=True)
+    wb = build_invoice(
+        broker, insurer,
+        invoice_no, invoice_date, args.period,
+        taxable_amount, gst_type,
+        particulars_note=particulars_note,
+        round_off=round_off,
+        reference_no_and_date=args.reference,
+    )
+
+    out_dir = args.out_dir or OUT_DIR
+    os.makedirs(out_dir, exist_ok=True)
     period_slug = args.period.replace(' ', '').replace('/', '-')
     inv_slug    = invoice_no.replace('/', '-').replace(' ', '_')
     filename    = f"INV_{args.insurer_id.upper()}_{period_slug}_{inv_slug}.xlsx"
-    out_path    = os.path.join(OUT_DIR, filename)
+    out_path    = os.path.join(out_dir, filename)
     wb.save(out_path)
 
-    tot_prem   = sum(i['premium']    for i in line_items)
-    tot_comm   = sum(i['commission'] for i in line_items)
-    gst_amount = round(tot_comm * GST_RATE, 2)
-    inv_total  = round(tot_comm + gst_amount, 2)
+    gst_amount = round(taxable_amount * (0.18 if gst_type == 'IGST' else 0.18), 2)
+    inv_total  = round(taxable_amount + gst_amount + round_off, 2)
 
     print(f"\n{'='*55}")
     print(f"  File            : {filename}")
     print(f"  Insurer         : {insurer.get('insurer_name', '')}")
     print(f"  Period          : {args.period}")
     print(f"  Products        : {len(line_items)} line(s)")
-    print(f"  Total Premium   : {tot_prem:>14,.2f}")
-    print(f"  Total Commission: {tot_comm:>14,.2f}")
+    print(f"  Taxable (comm)  : {taxable_amount:>14,.2f}")
     print(f"  GST ({gst_type:<9}): {gst_amount:>14,.2f}")
+    if round_off:
+        print(f"  Round Off       : {round_off:>14,.2f}")
     print(f"  Invoice Total   : {inv_total:>14,.2f}")
     print(f"  Saved to        : {out_path}")
     print(f"{'='*55}\n")
-
-
 if __name__ == '__main__':
     main()

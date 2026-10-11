@@ -309,6 +309,30 @@ var STATEMENT_HEADERS_DATA = [
   ]
 ];
 
+// ── INSURER STATUS SEED DATA ──────────────────────────────────────────────────
+// Master tracking view. Update this tab in the sheet as each item is completed.
+// Columns: insurer_id | insurer_name | data_configured | grid_configured
+//        | statement_configured | notes | last_updated
+//
+// data_configured  = Y once GSTIN, address, SPOC email filled in Insurer Master
+// grid_configured  = Y once rate grids uploaded and validated
+// statement_configured = Y / Pending / N
+
+var INSURER_STATUS_DATA = [
+  ['OR',      'THE ORIENTAL INSURANCE CO LTD',              'N','N','Y',      'PDF — two stacked physical lines per policy; special parser needed when building master-grid mapper',      '2026-10-11'],
+  ['NIC',     'NATIONAL INSURANCE CO LTD',                  'N','N','Y',      'PDF — header block + Grand Total footer; 11-col data table confirmed',                                    '2026-10-11'],
+  ['UIIC',    'UNITED INDIA INSURANCE CO LTD',              'N','N','Y',      'Excel Sheet1; 11 cols; OD (Dep 31) + TP (Dep 32) rows summed per policy',                                '2026-10-11'],
+  ['USGI',    'UNIVERSAL SOMPO GENERAL INSURANCE CO LTD',   'N','N','Y',      'Excel 2 sheets (MOTOR+NON-MOTOR, header row 2); 130+ cols; customer_Name appears twice',               '2026-10-11'],
+  ['TATA',    'TATA AIG GENERAL INSURANCE CO LTD',          'N','N','Y',      '3 filters: table_name≠TDS, Subproducer_Code blank, Coinsurance_Flag≠Follower',                         '2026-10-11'],
+  ['BAJAJ',   'BAJAJ ALLIANZ GENERAL INSURANCE CO LTD',     'N','N','Pending','Awaiting statement from client — column names not yet confirmed',                                        '2026-10-11'],
+  ['GO',      'GO DIGIT GENERAL INSURANCE LTD',             'N','N','Y',      'xlsb format; TOTAL_AMT = IRDA_AMT + REWARD_AMT; 80+ cols confirmed',                                   '2026-10-11'],
+  ['INDUSIND','INDUSIND GENERAL INSURANCE CO LTD',          'N','N','Y',      'Formerly Reliance General; brokerage = sum of 4 cols (FinalIRDAComm+RewardComm+FinalTPComm+FinalTerrComm)','2026-10-11'],
+  ['NIA',     'THE NEW INDIA ASSURANCE CO LTD',             'N','N','Y',      'PDF — 2 tables; extract Policy-level detail only; ignore Tax summary',                                  '2026-10-11'],
+  ['ICICI',   'ICICI LOMBARD GENERAL INSURANCE CO LTD',     'N','N','Y',      'CSV; 63 cols; filter TRANSACTION_STATUS (skip reversed/cancelled)',                                     '2026-10-11'],
+  ['KOTAK',   'ZURICH KOTAK GENERAL INSURANCE CO LTD',      'N','N','Y',      'Formerly Kotak/Kotak Mahindra; use Total Commission (pre-TDS), not Net Commission',                    '2026-10-11'],
+  ['SBIG',    'SBI GENERAL INSURANCE CO LTD',               'N','N','Y',      '53 cols; co-insurance: PAY_COMMISSION_TO_LEADER = leader rows only',                                   '2026-10-11']
+];
+
 // ── DERIVATION RULES SEED DATA ────────────────────────────────────────────────
 
 var DERIVATION_RULES_DATA = [
@@ -578,7 +602,45 @@ function createBrokerConfig_(folderId) {
     ['INSURER_INVOICE_COUNTER', 0]
   ]);
 
-  // Tab 6: Statement_Headers
+  // Tab 6: Insurer_Status — master tracking view
+  var isSheet = addTab_(ss, 'Insurer_Status', [
+    'insurer_id','insurer_name','data_configured','grid_configured',
+    'statement_configured','notes','last_updated'
+  ], '#1a4971');
+  if (isSheet.getLastRow() > 1) {
+    isSheet.getRange(2, 1, isSheet.getLastRow() - 1, 7).clearContent();
+  }
+  isSheet.getRange(2, 1, INSURER_STATUS_DATA.length, 7).setValues(INSURER_STATUS_DATA);
+  isSheet.setColumnWidth(1, 90);
+  isSheet.setColumnWidth(2, 280);
+  isSheet.setColumnWidth(3, 120);
+  isSheet.setColumnWidth(4, 110);
+  isSheet.setColumnWidth(5, 150);
+  isSheet.setColumnWidth(6, 420);
+  isSheet.setColumnWidth(7, 90);
+
+  // Traffic-light conditional formatting on status columns C, D, E
+  var statusRows = INSURER_STATUS_DATA.length;
+  var statusRangesCDE = [
+    isSheet.getRange(2, 3, statusRows, 3)
+  ];
+  var cfRules = [
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Y')
+      .setBackground('#c6efce').setFontColor('#276221')
+      .setRanges(statusRangesCDE).build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Pending')
+      .setBackground('#ffeb9c').setFontColor('#7a4f00')
+      .setRanges([isSheet.getRange(2, 5, statusRows, 1)]).build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('N')
+      .setBackground('#ffc7ce').setFontColor('#9c0006')
+      .setRanges(statusRangesCDE).build()
+  ];
+  isSheet.setConditionalFormatRules(cfRules);
+
+  // Tab 7: Statement_Headers
   var shSheet = addTab_(ss, 'Statement_Headers', [
     'insurer_id','file_format','sheet_name','header_row',
     'policy_no_col','brokerage_col','premium_col',
@@ -593,7 +655,7 @@ function createBrokerConfig_(folderId) {
   addTab_(ss, 'Prompts',
     ['insurer_id','prompt_template','notes'], '#444444');
 
-  Logger.log('Broker Config Sheet created with 7 tabs');
+  Logger.log('Broker Config Sheet created with 8 tabs');
   return ss.getId();
 }
 
